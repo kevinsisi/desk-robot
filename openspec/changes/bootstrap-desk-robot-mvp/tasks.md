@@ -55,7 +55,8 @@
 - [ ] 7.3 Implement `ActivityStream` from persisted runtime events.
 - [ ] 7.4 Implement `ApprovalQueue` with approve/deny controls and risk summaries.
 - [ ] 7.5 Ensure all user-facing copy is Traditional Chinese and mobile-first touch targets are at least 44px.
-- [ ] 7.6 Add component or integration tests for idle state, active task state, and pending approval display.
+- [ ] 7.6 Add explicit camera/microphone permission probe UI that only starts after user action and handles denied/non-secure-origin states.
+- [ ] 7.7 Add component or integration tests for idle state, active task state, pending approval display, and media permission states.
 
 ## 8. Runtime Event Streaming
 
@@ -69,6 +70,7 @@
 - [ ] 9.1 Run `npm run typecheck` from the repo root.
 - [ ] 9.2 Run `npm run test` from the repo root.
 - [ ] 9.3 Run `npm run build` from the repo root.
-- [ ] 9.4 Update OpenSpec artifacts if implementation changes requirements or design.
-- [ ] 9.5 Commit the completed logical unit with a conventional commit message.
-- [ ] 9.6 Push to `origin main` or a feature branch as appropriate and track CI result.
+- [ ] 9.4 Verify `https://robot.sisihome.org` loads through HTTPS after deployment so browser camera/microphone APIs are available.
+- [ ] 9.5 Update OpenSpec artifacts if implementation changes requirements or design.
+- [ ] 9.6 Commit the completed logical unit with a conventional commit message.
+- [ ] 9.7 Push to `origin main` or a feature branch as appropriate and track CI result.

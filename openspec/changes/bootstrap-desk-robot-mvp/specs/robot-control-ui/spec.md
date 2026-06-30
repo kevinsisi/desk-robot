@@ -36,3 +36,23 @@ The system SHALL use responsive layout, touch targets of at least 44px, and Trad
 
 - **WHEN** the UI is opened on a mobile-width viewport
 - **THEN** primary controls SHALL remain reachable without horizontal scrolling
+
+
+### Requirement: UI supports explicit camera and microphone permission flow
+
+The system SHALL support browser camera and microphone access from the HTTPS `robot.sisihome.org` secure context, with capture started only after explicit user action.
+
+#### Scenario: User grants camera and microphone permission
+
+- **WHEN** the user explicitly starts a camera or microphone check and grants browser permission
+- **THEN** the UI SHALL show the granted device state without implying background recording is active
+
+#### Scenario: User denies camera or microphone permission
+
+- **WHEN** the user denies camera or microphone permission
+- **THEN** the UI SHALL show a clear Traditional Chinese permission error and SHALL NOT retry capture automatically
+
+#### Scenario: Non-secure context blocks media devices
+
+- **WHEN** the UI is opened from a non-secure origin that cannot use `navigator.mediaDevices`
+- **THEN** the UI SHALL explain that camera and microphone require `https://robot.sisihome.org` or localhost development mode

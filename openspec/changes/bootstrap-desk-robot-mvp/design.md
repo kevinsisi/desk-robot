@@ -10,14 +10,14 @@ The governing stack defaults are React + TypeScript + Vite, Tailwind CSS, Node.j
 
 - Bootstrap a runnable monorepo with `packages/client` and `packages/server`.
 - Provide a local backend runtime for sessions, messages, active tasks, approvals, tool events, and persisted state.
-- Provide a Traditional Chinese UI that shows robot state, active task progress, activity evidence, and approval prompts.
+- Provide a Traditional Chinese UI at `https://robot.sisihome.org` that shows robot state, active task progress, activity evidence, approval prompts, and browser camera/microphone permission state.
 - Define tool capabilities as data with permission levels, timeouts, retries, and safe result reporting.
 - Ship tests, build scripts, version constants, and CI foundations from the first product commit.
 
 **Non-Goals:**
 
 - No physical robot hardware integration in the MVP.
-- No always-listening microphone or camera capture in the MVP.
+- No always-listening microphone or camera capture in the MVP; camera/microphone support must be explicit, user-triggered, permission-aware, and only available from the HTTPS secure context.
 - No remote code execution, shell control, or Home Assistant operations until explicit capability gates are designed.
 - No fake autonomous status text that is not backed by persisted events or runtime state.
 - No multi-user auth in the first local MVP.
@@ -66,6 +66,14 @@ Alternatives considered:
 - Pure chat UI: too generic and hides the robot/task concept.
 - Animated mascot first: risks fake liveness before runtime behavior exists.
 
+### Decision: Reserve `robot.sisihome.org` as the HTTPS secure-context domain
+
+Use `https://robot.sisihome.org` as the canonical private/Tailscale URL for the desk robot UI. The route should target the future web service on port `8723` and keep same-origin API/SSE/media permission flows so browser camera and microphone APIs are available without mixed-content issues.
+
+Alternatives considered:
+- `desk-robot.sisihome.org`: descriptive but longer and less memorable.
+- HTTP-only local URL: insufficient for browser camera/microphone APIs outside localhost secure-context exceptions.
+
 ## Risks / Trade-offs
 
 - Scope creep into a full personal assistant → Keep MVP local, explicit, and approval-gated.
@@ -73,6 +81,7 @@ Alternatives considered:
 - UI over-promises autonomy → Only render status from persisted events/tasks.
 - Tool results leak sensitive data → Add redaction policy and result shaping in the capability registry.
 - Fastify/SQLite integration choices may need migration later → Keep storage access behind small repository modules.
+- Browser media permissions vary across Safari/iOS/Chrome → Keep camera/microphone access user-triggered, surface permission errors clearly, and verify on HTTPS domain before claiming support.
 
 ## Migration Plan
 
@@ -81,7 +90,8 @@ Alternatives considered:
 3. Add runtime state machine and event append APIs.
 4. Add UI projection endpoints and SSE stream.
 5. Add UI surfaces for robot state, task state, events, and approvals.
-6. Add tests/build/CI.
+6. Add camera/microphone permission probes in the UI without auto-start capture.
+7. Add tests/build/CI.
 
 Rollback is simple until deployment: revert the product-code commits and keep OpenSpec artifacts as the planning source.
 
@@ -89,4 +99,4 @@ Rollback is simple until deployment: revert the product-code commits and keep Op
 
 - Should the first visual identity lean industrial, minimal, or organic? Default recommendation: compact industrial control panel with a small expressive robot face.
 - Should the first external integration be local file/project awareness, HomeProject status, or calendar/reminders? Default recommendation: local project/task awareness only.
-- Should the app be deployed immediately under `desk-robot.sisihome.org` after MVP, or stay local until tool safety is proven?
+- Should the app be deployed immediately under `robot.sisihome.org` after MVP, or stay local until tool safety is proven?

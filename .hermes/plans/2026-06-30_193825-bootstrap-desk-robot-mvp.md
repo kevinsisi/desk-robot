@@ -2,7 +2,7 @@
 
 > **For Hermes:** Use subagent-driven-development skill to implement this plan task-by-task.
 
-**Goal:** Bootstrap `desk-robot` as a local-first desktop companion with an evidence-backed agent runtime, safe tool registry, SQLite persistence, and a Traditional Chinese control UI.
+**Goal:** Bootstrap `desk-robot` as a local-first desktop companion at `https://robot.sisihome.org` with an evidence-backed agent runtime, safe tool registry, SQLite persistence, camera/microphone permission support, and a Traditional Chinese control UI.
 
 **Architecture:** Use an npm workspaces monorepo with `packages/server` for Fastify + TypeScript + SQLite runtime APIs, and `packages/client` for React + TypeScript + Vite + Tailwind UI. Runtime state is persisted as sessions, messages, tasks, approvals, tool events, and runtime events; the UI only renders state derived from those records.
 
@@ -28,6 +28,8 @@
 - SQLite persistence.
 - Safe, initially minimal capability registry.
 - Approval queue UI and API.
+- HTTPS secure-context route at `robot.sisihome.org` for browser camera/microphone support.
+- Explicit camera/microphone permission probes; no auto-start capture.
 - CI with typecheck/test/build.
 
 ### Out of scope for MVP
@@ -35,6 +37,7 @@
 - Physical robot hardware.
 - Camera/microphone capture.
 - Home Assistant or shell-control tools.
+- Always-listening or hidden camera/microphone recording.
 - Multi-user auth.
 - Fake autonomous animations/status not backed by events.
 
@@ -188,6 +191,7 @@ npm run --workspace @desk-robot/client build
 - Create: `packages/client/src/components/TaskPanel.tsx`
 - Create: `packages/client/src/components/ActivityStream.tsx`
 - Create: `packages/client/src/components/ApprovalQueue.tsx`
+- Create: `packages/client/src/components/MediaPermissionPanel.tsx`
 - Modify: `packages/client/src/App.tsx`
 
 **Design direction:** Compact industrial control panel, not generic gradient cards.
@@ -216,6 +220,28 @@ npm run --workspace @desk-robot/client build
 ```bash
 npm run test
 npm run build
+```
+
+
+### Task 8.5: Add camera/microphone permission probe
+
+**Objective:** Confirm browser media-device capability from the HTTPS domain without starting hidden recording.
+
+**Files:**
+- Create: `packages/client/src/components/MediaPermissionPanel.tsx`
+- Modify: `packages/client/src/App.tsx`
+
+**Behavior:**
+- Show whether `navigator.mediaDevices?.getUserMedia` is available.
+- Start camera/microphone check only after a user click/tap.
+- Stop tracks immediately after permission probing unless the user explicitly enters a future capture mode.
+- Show Traditional Chinese errors for denied permission or non-secure origins.
+
+**Verification:**
+
+```bash
+npm run --workspace @desk-robot/client build
+# after deployment: open https://robot.sisihome.org and verify browser media permission prompt works
 ```
 
 ### Task 9: Add CI and completion follow-through
@@ -247,4 +273,4 @@ git status --short
 
 1. 第一版要偏「工業控制台」還是「可愛桌寵」？我建議先工業控制台，避免假活著感。
 2. 第一個真實工具要接「專案/檔案狀態」還是先完全只做 runtime skeleton？我建議先 skeleton。
-3. MVP 完成後要不要直接部署到 `desk-robot.sisihome.org`？我建議等工具權限模型穩定後再部署。
+3. MVP 完成後要不要直接部署到 `robot.sisihome.org`？我建議先掛 HTTPS domain，正式工具權限模型穩定後再開更多能力。
