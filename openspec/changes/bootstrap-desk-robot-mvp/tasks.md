@@ -55,7 +55,7 @@
 - [x] 7.3 Implement `ActivityStream` from persisted runtime events.
 - [x] 7.4 Implement `ApprovalQueue` with approve/deny controls and risk summaries.
 - [x] 7.5 Ensure all user-facing copy is Traditional Chinese and mobile-first touch targets are at least 44px.
-- [x] 7.6 Add explicit camera/microphone permission probe UI that only starts after user action and handles denied/non-secure-origin states.
+- [x] 7.6 Add explicit camera/microphone permission probe UI, front-camera preview, and local audio recording controls that only start after user action and handle denied/non-secure-origin states.
 - [x] 7.7 Add component or integration tests for idle state, active task state, pending approval display, media permission states, and message append behavior.
 
 ## 8. Runtime Event Streaming

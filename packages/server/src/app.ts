@@ -97,6 +97,22 @@ export function buildApp() {
     }
   });
 
+  app.post<{ Body: { kind?: string; safeSummary?: string } }>('/api/events', async (request, reply) => {
+    const kind = String(request.body?.kind ?? '').slice(0, 80);
+    const safeSummary = String(request.body?.safeSummary ?? '').trim().slice(0, 200);
+    if (!kind || !safeSummary) {
+      return reply.status(400).send({ error: 'invalid_event' });
+    }
+    const event = {
+      id: `evt-${Date.now()}`,
+      type: kind,
+      safeSummary,
+      createdAt: new Date().toISOString(),
+    };
+    runtimeEvents.unshift(event);
+    return reply.status(201).send({ event });
+  });
+
   const staticRoot = process.env.STATIC_ROOT;
   if (staticRoot && existsSync(staticRoot)) {
     app.register(fastifyStatic, {

@@ -35,6 +35,20 @@ it('accepts a user message and appends a runtime event', async () => {
   expect(body.robot.label).toBe('收到指令');
 });
 
+it('accepts a media event and exposes it in state', async () => {
+  const app = buildApp();
+  const create = await app.inject({
+    method: 'POST',
+    url: '/api/events',
+    payload: { kind: 'camera.started', safeSummary: '使用者開啟前鏡頭本機預覽。' },
+  });
+  expect(create.statusCode).toBe(201);
+
+  const state = await app.inject({ method: 'GET', url: '/api/state' });
+  const body = state.json();
+  expect(body.events[0]).toMatchObject({ type: 'camera.started', safeSummary: '使用者開啟前鏡頭本機預覽。' });
+});
+
 it('rejects blank messages', async () => {
   const app = buildApp();
   const response = await app.inject({ method: 'POST', url: '/api/messages', payload: { content: '   ' } });

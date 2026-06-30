@@ -59,3 +59,11 @@ export async function sendMessage(content: string): Promise<void> {
     throw new Error(`送出失敗：${response.status}`);
   }
 }
+
+export async function recordMediaEvent(kind: 'camera.started' | 'camera.stopped' | 'audio.recorded', safeSummary: string): Promise<void> {
+  await fetch('/api/events', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ kind, safeSummary }),
+  });
+}
