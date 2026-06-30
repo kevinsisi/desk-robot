@@ -158,6 +158,7 @@ p { line-height: 1.7; }
 .message-user { border-left-color: var(--warning); }
 .message p { margin-bottom: 0; white-space: pre-wrap; }
 .chat-form { display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: stretch; }
+.chat-actions { display: grid; grid-template-rows: 1fr 1fr; gap: 8px; }
 .chat-form button { height: 100%; }
 .event-list { list-style: none; padding: 0; margin: 0; }
 .event-list li { display: grid; gap: 6px; }
