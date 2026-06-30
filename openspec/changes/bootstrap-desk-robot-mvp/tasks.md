@@ -1,18 +1,18 @@
 ## 1. Workspace and Tooling
 
-- [ ] 1.1 Create root `package.json` with npm workspaces, shared scripts, and project metadata.
-- [ ] 1.2 Add root `tsconfig.base.json` and workspace TypeScript conventions.
-- [ ] 1.3 Add `.gitignore` for Node, build output, SQLite runtime files, and local env files.
-- [ ] 1.4 Add GitHub Actions CI that runs install, typecheck, test, and build.
-- [ ] 1.5 Run root install/typecheck/test/build commands and record the concrete output.
+- [x] 1.1 Create root `package.json` with npm workspaces, shared scripts, and project metadata.
+- [x] 1.2 Add root `tsconfig.base.json` and workspace TypeScript conventions.
+- [x] 1.3 Add `.gitignore` for Node, build output, SQLite runtime files, and local env files.
+- [x] 1.4 Add GitHub Actions CI that runs install, typecheck, test, and build.
+- [x] 1.5 Run root install/typecheck/test/build commands and record the concrete output.
 
 ## 2. Server Bootstrap
 
-- [ ] 2.1 Create `packages/server` package with Fastify, TypeScript, Vitest, and build scripts.
-- [ ] 2.2 Implement `GET /health` returning `{ ok: true, version }`.
-- [ ] 2.3 Add server config module for port, database path, and runtime mode.
-- [ ] 2.4 Add server tests for app creation and `/health`.
-- [ ] 2.5 Verify server package tests and build pass.
+- [x] 2.1 Create `packages/server` package with Fastify, TypeScript, Vitest, and build scripts.
+- [x] 2.2 Implement `GET /health` returning `{ ok: true, version }`.
+- [x] 2.3 Add server config module for port, database path, and runtime mode.
+- [x] 2.4 Add server tests for app creation and `/health`.
+- [x] 2.5 Verify server package tests and build pass.
 
 ## 3. Local Persistence
 
@@ -42,21 +42,21 @@
 
 ## 6. Client Bootstrap
 
-- [ ] 6.1 Create `packages/client` package with React, Vite, TypeScript, Tailwind, Vitest, and build scripts.
-- [ ] 6.2 Add `src/version.ts` with `APP_VERSION` and render it in the footer.
-- [ ] 6.3 Add API client wrapper for state, messages, tools, and approvals.
-- [ ] 6.4 Add base layout and styling with compact industrial control-panel direction.
-- [ ] 6.5 Verify client package build passes.
+- [x] 6.1 Create `packages/client` package with React, Vite, TypeScript, Tailwind, Vitest, and build scripts.
+- [x] 6.2 Add `src/version.ts` with `APP_VERSION` and render it in the footer.
+- [x] 6.3 Add API client wrapper for state, messages, tools, and approvals.
+- [x] 6.4 Add base layout and styling with compact industrial control-panel direction.
+- [x] 6.5 Verify client package build passes.
 
 ## 7. Robot Control UI
 
-- [ ] 7.1 Implement `RobotFace` using only evidence-backed state labels.
-- [ ] 7.2 Implement `TaskPanel` showing objective, current step, status, and last updated time.
-- [ ] 7.3 Implement `ActivityStream` from persisted runtime events.
-- [ ] 7.4 Implement `ApprovalQueue` with approve/deny controls and risk summaries.
-- [ ] 7.5 Ensure all user-facing copy is Traditional Chinese and mobile-first touch targets are at least 44px.
-- [ ] 7.6 Add explicit camera/microphone permission probe UI that only starts after user action and handles denied/non-secure-origin states.
-- [ ] 7.7 Add component or integration tests for idle state, active task state, pending approval display, and media permission states.
+- [x] 7.1 Implement `RobotFace` using only evidence-backed state labels.
+- [x] 7.2 Implement `TaskPanel` showing objective, current step, status, and last updated time.
+- [x] 7.3 Implement `ActivityStream` from persisted runtime events.
+- [x] 7.4 Implement `ApprovalQueue` with approve/deny controls and risk summaries.
+- [x] 7.5 Ensure all user-facing copy is Traditional Chinese and mobile-first touch targets are at least 44px.
+- [x] 7.6 Add explicit camera/microphone permission probe UI that only starts after user action and handles denied/non-secure-origin states.
+- [x] 7.7 Add component or integration tests for idle state, active task state, pending approval display, and media permission states.
 
 ## 8. Runtime Event Streaming
 

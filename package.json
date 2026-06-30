@@ -1,0 +1,20 @@
+{
+  "name": "desk-robot",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "packages/server",
+    "packages/client"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspace @desk-robot/server & npm run dev --workspace @desk-robot/client",
+    "build": "npm run build --workspaces",
+    "typecheck": "npm run typecheck --workspaces",
+    "test": "npm run test --workspaces",
+    "lint": "npm run typecheck"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}
