@@ -34,14 +34,14 @@ interface ChatPanelProps {
   messages: ChatMessage[];
   onSend: (content: string) => Promise<void>;
   onVisionCommand: (content: string) => Promise<void>;
-  onStartCompanion?: () => Promise<void>;
+  onRegisterSpeechStarter?: (starter: (() => void) | null) => void;
 }
 
 function cleanForSpeech(text: string) {
   return text.replace(/`{1,3}/g, '').replace(/https?:\/\/\S+/g, '網址').slice(0, 420);
 }
 
-export function ChatPanel({ messages, onSend, onVisionCommand, onStartCompanion }: ChatPanelProps) {
+export function ChatPanel({ messages, onSend, onVisionCommand, onRegisterSpeechStarter }: ChatPanelProps) {
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
   const keepListeningRef = useRef(false);
   const sendingRef = useRef(false);
@@ -171,35 +171,20 @@ export function ChatPanel({ messages, onSend, onVisionCommand, onStartCompanion 
     setSpeechStatus('已停止即時語音。');
   }
 
-  async function startCompanionMode() {
-    setVoiceReplyEnabled(true);
-    setError(null);
-    try {
-      await onStartCompanion?.();
-      startSpeech();
-      setSpeechStatus('夥伴模式啟動：我會聽你說、看前鏡頭、用文字與語音回覆。');
-    } catch (err) {
-      setError(err instanceof Error ? err.message : '夥伴模式啟動失敗');
-    }
-  }
+  useEffect(() => {
+    onRegisterSpeechStarter?.(startSpeech);
+    return () => onRegisterSpeechStarter?.(null);
+  });
 
   return (
     <section className="panel chat-panel" aria-label="訊息輸入">
       <div className="panel-kicker">COMMAND INPUT</div>
       <h2>對 Desk Robot 說話</h2>
-      <div className="companion-toolbar" aria-label="夥伴模式控制">
-        <button type="button" onClick={startCompanionMode} disabled={sending || listening}>
-          夥伴模式
-        </button>
-        <button type="button" className={voiceReplyEnabled ? '' : 'secondary'} onClick={() => setVoiceReplyEnabled((enabled) => !enabled)}>
-          {voiceReplyEnabled ? '語音回覆開' : '語音回覆關'}
-        </button>
-      </div>
       <div className="message-list">
         {messages.map((message) => (
           <article key={message.id} className={`message message-${message.role}`}>
             <div className="status-line">
-              <span>{message.role === 'user' ? '你' : 'Desk Robot'}</span>
+              <span>{message.role === 'user' ? '你' : 'Desk Bot'}</span>
               <time>{new Date(message.createdAt).toLocaleTimeString('zh-TW', { hour12: false })}</time>
             </div>
             <p>{message.content}</p>
@@ -216,7 +201,7 @@ export function ChatPanel({ messages, onSend, onVisionCommand, onStartCompanion 
         <textarea
           value={draft}
           onChange={(event) => setDraft(event.target.value)}
-          placeholder="輸入指令、問「你看到什麼」，或按夥伴模式直接說"
+          placeholder="輸入訊息，或問：你看到什麼？"
           rows={3}
         />
         <div className="chat-actions">

@@ -37,7 +37,7 @@ const runtimeEvents: RuntimeEvent[] = [
   { id: 'evt-3', type: 'media.permission', safeSummary: '相機與麥克風只會在你手動確認後啟用。', createdAt: bootTime },
 ];
 const messages: ChatMessage[] = [
-  { id: 'msg-1', role: 'assistant', content: '我在線上。按「夥伴模式」後，我可以聽你說話、看前鏡頭、讀懂指令，並用文字與語音回覆。', createdAt: bootTime },
+  { id: 'msg-1', role: 'assistant', content: '嗨，我準備好了。', createdAt: bootTime },
 ];
 
 function appendEvent(type: string, safeSummary: string) {

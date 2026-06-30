@@ -39,7 +39,7 @@ const fallbackState: DeskRobotState = {
     { id: 'local-2', type: 'guardrail.media', safeSummary: '沒有背景錄音錄影；只支援手動測試權限。', createdAt: new Date().toISOString() },
   ],
   messages: [
-    { id: 'local-msg-1', role: 'assistant', content: '本機預覽已啟動。', createdAt: new Date().toISOString() },
+    { id: 'local-msg-1', role: 'assistant', content: '嗨，我準備好了。', createdAt: new Date().toISOString() },
   ],
 };
 
@@ -48,6 +48,7 @@ export function App() {
   const [loadStatus, setLoadStatus] = useState<'loading' | 'live' | 'fallback'>('loading');
   const visionAnalyzerRef = useRef<VisionAnalyzer | null>(null);
   const companionStarterRef = useRef<CompanionStarter | null>(null);
+  const speechStarterRef = useRef<(() => void) | null>(null);
 
   async function refreshState() {
     const nextState = await fetchState();
@@ -92,6 +93,7 @@ export function App() {
     const starter = companionStarterRef.current;
     if (!starter) throw new Error('夥伴模式還沒準備好，請重新整理頁面。');
     await starter();
+    speechStarterRef.current?.();
   }
 
   const registerVisionAnalyzer = useCallback((analyzer: VisionAnalyzer | null) => {
@@ -102,50 +104,40 @@ export function App() {
     companionStarterRef.current = starter;
   }, []);
 
+  const registerSpeechStarter = useCallback((starter: (() => void) | null) => {
+    speechStarterRef.current = starter;
+  }, []);
+
+  const latestAssistantLine = state.messages.find((message) => message.role === 'assistant')?.content;
+
   return (
-    <main className="app-shell">
-      <header className="topbar">
-        <div>
-          <p className="eyebrow">DESK ROBOT / PRIVATE COMPANION SURFACE</p>
-          <h1>桌面機器人控制台</h1>
-        </div>
-        <div className="topbar-meta">
-          <span className={`load-pill load-${loadStatus}`}>{loadStatus === 'live' ? 'API 連線' : loadStatus === 'fallback' ? '本機預覽' : '讀取中'}</span>
-          <span>v{APP_VERSION}</span>
-        </div>
+    <main className="app-shell companion-shell">
+      <header className="minimal-topbar">
+        <span>Desk Bot</span>
+        <span className={`load-pill load-${loadStatus}`}>{loadStatus === 'live' ? '在線' : loadStatus === 'fallback' ? '預覽' : '讀取中'}</span>
       </header>
 
-      <section className="hero-strip" aria-label="部署資訊">
-        <div>
-          <span>DOMAIN</span>
-          <strong>{state.robot.domain}</strong>
-        </div>
-        <div>
-          <span>CAPABILITIES</span>
-          <strong>{getProductCapabilities().join(' / ')}</strong>
-        </div>
-        <div>
-          <span>MEDIA</span>
-          <strong>手動授權、夥伴模式</strong>
-        </div>
-      </section>
+      <RobotFace state={state.robot} lastLine={latestAssistantLine} onStartCompanion={handleStartCompanion} />
 
-      <div className="dashboard-grid">
-        <RobotFace state={state.robot} />
-        <TaskPanel task={state.activeTask} />
-        <MediaPermissionPanel
-          onAnalyzeVision={handleAnalyzeVision}
-          onRegisterVisionAnalyzer={registerVisionAnalyzer}
-          onRegisterCompanionStarter={registerCompanionStarter}
-        />
-        <ChatPanel messages={state.messages} onSend={handleSendMessage} onVisionCommand={handleVisionCommand} onStartCompanion={handleStartCompanion} />
-        <ApprovalQueue approvals={state.approvals} />
-        <ActivityStream events={state.events} />
-      </div>
+      <ChatPanel messages={state.messages} onSend={handleSendMessage} onVisionCommand={handleVisionCommand} onRegisterSpeechStarter={registerSpeechStarter} />
+
+      <details className="technical-drawer">
+        <summary>相機、權限與紀錄</summary>
+        <div className="dashboard-grid compact-grid">
+          <MediaPermissionPanel
+            onAnalyzeVision={handleAnalyzeVision}
+            onRegisterVisionAnalyzer={registerVisionAnalyzer}
+            onRegisterCompanionStarter={registerCompanionStarter}
+          />
+          <TaskPanel task={state.activeTask} />
+          <ApprovalQueue approvals={state.approvals} />
+          <ActivityStream events={state.events} />
+        </div>
+      </details>
 
       <footer>
-        <span>Desk Robot v{APP_VERSION}</span>
-        <span>支援鏡頭辨識、語音辨識、指令理解、文字/語音回覆；媒體只在你手動啟用後運作。</span>
+        <span>v{APP_VERSION}</span>
+        <span>{getProductCapabilities().join(' / ')}</span>
       </footer>
     </main>
   );

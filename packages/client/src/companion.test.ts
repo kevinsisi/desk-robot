@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { classifyCompanionCommand, getProductCapabilities } from './companion';
+import { classifyCompanionCommand, getProductCapabilities, getPrimaryActions, getRobotExpression } from './companion';
 
 describe('companion command routing', () => {
   it('routes visual questions to camera analysis', () => {
@@ -23,5 +23,18 @@ describe('product capability copy', () => {
       '語音回覆',
       '夥伴模式',
     ]);
+  });
+
+  it('keeps the main UI focused on one obvious action', () => {
+    expect(getPrimaryActions()).toEqual(['開始陪我']);
+  });
+});
+
+describe('robot expression model', () => {
+  it('maps runtime state to lively expressions', () => {
+    expect(getRobotExpression('idle')).toBe('curious');
+    expect(getRobotExpression('thinking')).toBe('thinking');
+    expect(getRobotExpression('acting')).toBe('happy');
+    expect(getRobotExpression('blocked')).toBe('worried');
   });
 });

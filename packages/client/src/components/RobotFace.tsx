@@ -1,27 +1,41 @@
 import type { DeskRobotState } from '../api/client';
+import { getRobotExpression } from '../companion';
 
 interface RobotFaceProps {
   state: DeskRobotState['robot'];
+  lastLine?: string;
+  onStartCompanion?: () => Promise<void>;
 }
 
-export function RobotFace({ state }: RobotFaceProps) {
+export function RobotFace({ state, lastLine, onStartCompanion }: RobotFaceProps) {
+  const expression = getRobotExpression(state.state);
   return (
-    <section className="panel robot-panel" aria-label="機器人狀態">
-      <div className="panel-kicker">ROBOT CORE</div>
-      <div className="robot-face" aria-hidden="true">
-        <div className="antenna" />
-        <div className="visor">
-          <span className="eye left" />
-          <span className="eye right" />
+    <section className={`robot-stage expression-${expression}`} aria-label="Desk Bot">
+      <div className="ambient-orb orb-a" />
+      <div className="ambient-orb orb-b" />
+      <div className="bot-body" aria-hidden="true">
+        <div className="status-led" />
+        <div className="bot-ear bot-ear-left" />
+        <div className="bot-ear bot-ear-right" />
+        <div className="bot-face">
+          <div className="bot-blush blush-left" />
+          <div className="bot-blush blush-right" />
+          <div className="bot-eyes">
+            <span className="bot-eye bot-eye-left" />
+            <span className="bot-eye bot-eye-right" />
+          </div>
+          <div className="bot-mouth" />
         </div>
-        <div className="mouth" />
+        <div className="bot-shadow" />
       </div>
-      <div className="robot-state-row">
-        <span className="pulse-dot" />
-        <strong>{state.label}</strong>
+      <div className="bot-copy">
+        <div className="bot-mood">{state.label === '待命中' ? '等你叫我' : state.label}</div>
+        <h2>{expression === 'happy' ? '好，我在！' : expression === 'thinking' ? '我正在想…' : expression === 'worried' ? '我卡住了' : '嗨，我在這裡'}</h2>
+        <p>{lastLine || '按一下開始陪我，就能直接說話、讓我看畫面、聽我回覆。'}</p>
+        <button type="button" className="primary-companion-button" onClick={() => void onStartCompanion?.()}>
+          開始陪我
+        </button>
       </div>
-      <p className="muted">狀態只來自 runtime event，不補假台詞。</p>
-      <div className="domain-chip">{state.domain}</div>
     </section>
   );
 }
