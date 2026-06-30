@@ -165,9 +165,9 @@ p { line-height: 1.7; }
 .event-list li { display: grid; gap: 6px; }
 .event-list p { margin-bottom: 0; }
 .risk-medium { color: var(--warning); }
-.media-granted, .media-previewing, .media-recording { color: var(--accent); }
+.media-granted, .media-previewing, .media-recording, .media-analyzing { color: var(--accent); }
 .media-denied, .media-error { color: var(--danger); }
-.media-actions { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 12px; }
+.media-actions { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 12px; }
 .media-panel button { width: 100%; }
 .camera-preview {
   width: 100%;

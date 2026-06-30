@@ -30,8 +30,9 @@ it('accepts a user message and appends a runtime event', async () => {
 
   const state = await app.inject({ method: 'GET', url: '/api/state' });
   const body = state.json();
-  expect(body.messages[0]).toMatchObject({ role: 'user', content: '繼續做 runtime' });
-  expect(body.events[0].type).toBe('message.received');
+  expect(body.messages[0]).toMatchObject({ role: 'assistant', content: '測試模式已收到指令：繼續做 runtime' });
+  expect(body.messages[1]).toMatchObject({ role: 'user', content: '繼續做 runtime' });
+  expect(body.events[0].type).toBe('agent.replied');
   expect(body.robot.label).toBe('收到指令');
 });
 

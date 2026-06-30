@@ -1,9 +1,13 @@
 import { useMemo, useRef, useState } from 'react';
 import { recordMediaEvent } from '../api/client';
 
-type PermissionState = 'idle' | 'unsupported' | 'checking' | 'granted' | 'denied' | 'error' | 'previewing' | 'recording';
+type PermissionState = 'idle' | 'unsupported' | 'checking' | 'granted' | 'denied' | 'error' | 'previewing' | 'recording' | 'analyzing';
 
-export function MediaPermissionPanel() {
+interface MediaPermissionPanelProps {
+  onAnalyzeVision: (imageDataUrl: string) => Promise<void>;
+}
+
+export function MediaPermissionPanel({ onAnalyzeVision }: MediaPermissionPanelProps) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const cameraStreamRef = useRef<MediaStream | null>(null);
   const recorderRef = useRef<MediaRecorder | null>(null);
@@ -104,6 +108,34 @@ export function MediaPermissionPanel() {
     if (recorderRef.current && recorderRef.current.state !== 'inactive') recorderRef.current.stop();
   }
 
+  async function analyzeCurrentFrame() {
+    const video = videoRef.current;
+    if (!video || !cameraStreamRef.current || video.readyState < HTMLMediaElement.HAVE_CURRENT_DATA) {
+      setState('error');
+      setMessage('請先開前鏡頭，等畫面出現後再按「辨識畫面」。');
+      return;
+    }
+
+    const previousState = state;
+    setState('analyzing');
+    setMessage('正在截取目前前鏡頭畫面並送給模型辨識。');
+    try {
+      const canvas = document.createElement('canvas');
+      canvas.width = video.videoWidth || 640;
+      canvas.height = video.videoHeight || 480;
+      const context = canvas.getContext('2d');
+      if (!context) throw new Error('canvas_unavailable');
+      context.drawImage(video, 0, 0, canvas.width, canvas.height);
+      const imageDataUrl = canvas.toDataURL('image/jpeg', 0.82);
+      await onAnalyzeVision(imageDataUrl);
+      setState(cameraStreamRef.current ? 'previewing' : 'granted');
+      setMessage('已完成畫面辨識，回覆已出現在對話區。前鏡頭仍只在你手動開啟時運作。');
+    } catch (error) {
+      setState(previousState === 'previewing' ? 'previewing' : 'error');
+      setMessage(error instanceof Error ? `畫面辨識失敗：${error.message}` : '畫面辨識失敗。');
+    }
+  }
+
   return (
     <section className="panel media-panel" aria-label="相機與麥克風權限">
       <div className="panel-kicker">MEDIA GATE</div>
@@ -113,13 +145,16 @@ export function MediaPermissionPanel() {
       <video ref={videoRef} className="camera-preview" playsInline muted autoPlay />
       {audioUrl ? <audio className="audio-preview" controls src={audioUrl}>錄音預覽</audio> : null}
       <div className="media-actions">
-        <button type="button" onClick={checkMedia} disabled={state === 'checking' || state === 'recording'}>
+        <button type="button" onClick={checkMedia} disabled={state === 'checking' || state === 'recording' || state === 'analyzing'}>
           {state === 'checking' ? '測試中…' : '測試權限'}
         </button>
-        <button type="button" onClick={state === 'previewing' ? () => stopCamera() : startCamera} disabled={state === 'recording'}>
+        <button type="button" onClick={state === 'previewing' ? () => stopCamera() : startCamera} disabled={state === 'recording' || state === 'analyzing'}>
           {state === 'previewing' ? '關閉前鏡頭' : '開前鏡頭'}
         </button>
-        <button type="button" onClick={state === 'recording' ? stopRecording : startRecording}>
+        <button type="button" onClick={analyzeCurrentFrame} disabled={state !== 'previewing'}>
+          {state === 'analyzing' ? '辨識中…' : '辨識畫面'}
+        </button>
+        <button type="button" onClick={state === 'recording' ? stopRecording : startRecording} disabled={state === 'analyzing'}>
           {state === 'recording' ? '停止錄音' : '錄一句話'}
         </button>
       </div>

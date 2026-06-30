@@ -67,3 +67,14 @@ export async function recordMediaEvent(kind: 'camera.started' | 'camera.stopped'
     body: JSON.stringify({ kind, safeSummary }),
   });
 }
+
+export async function analyzeVision(imageDataUrl: string, prompt?: string): Promise<void> {
+  const response = await fetch('/api/vision/analyze', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ imageDataUrl, prompt }),
+  });
+  if (!response.ok) {
+    throw new Error(`影像辨識失敗：${response.status}`);
+  }
+}

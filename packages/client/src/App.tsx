@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { fetchState, sendMessage, type DeskRobotState } from './api/client';
+import { fetchState, sendMessage, analyzeVision, type DeskRobotState } from './api/client';
 import { ActivityStream } from './components/ActivityStream';
 import { ApprovalQueue } from './components/ApprovalQueue';
 import { ChatPanel } from './components/ChatPanel';
@@ -74,6 +74,11 @@ export function App() {
     await refreshState();
   }
 
+  async function handleAnalyzeVision(imageDataUrl: string) {
+    await analyzeVision(imageDataUrl, '請辨識前鏡頭畫面，描述你看到的重點，並用 Desk Robot 的口吻回覆下一步建議。');
+    await refreshState();
+  }
+
   return (
     <main className="app-shell">
       <header className="topbar">
@@ -105,7 +110,7 @@ export function App() {
       <div className="dashboard-grid">
         <RobotFace state={state.robot} />
         <TaskPanel task={state.activeTask} />
-        <MediaPermissionPanel />
+        <MediaPermissionPanel onAnalyzeVision={handleAnalyzeVision} />
         <ChatPanel messages={state.messages} onSend={handleSendMessage} />
         <ApprovalQueue approvals={state.approvals} />
         <ActivityStream events={state.events} />
