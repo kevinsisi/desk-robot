@@ -134,6 +134,7 @@ p { line-height: 1.7; }
 .activity-panel { grid-column: span 2; }
 .muted { color: var(--muted); }
 .error-text { color: var(--danger); }
+.live-text { color: var(--accent); font-family: 'RobotMono', monospace; }
 
 .robot-face {
   position: relative;
