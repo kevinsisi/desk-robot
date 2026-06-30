@@ -1,5 +1,6 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { ChatMessage } from '../api/client';
+import { classifyCompanionCommand } from '../companion';
 
 declare global {
   interface Window {
@@ -32,18 +33,45 @@ interface SpeechRecognitionEventLike {
 interface ChatPanelProps {
   messages: ChatMessage[];
   onSend: (content: string) => Promise<void>;
+  onVisionCommand: (content: string) => Promise<void>;
+  onStartCompanion?: () => Promise<void>;
 }
 
-export function ChatPanel({ messages, onSend }: ChatPanelProps) {
+function cleanForSpeech(text: string) {
+  return text.replace(/`{1,3}/g, '').replace(/https?:\/\/\S+/g, '網址').slice(0, 420);
+}
+
+export function ChatPanel({ messages, onSend, onVisionCommand, onStartCompanion }: ChatPanelProps) {
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
   const keepListeningRef = useRef(false);
   const sendingRef = useRef(false);
   const lastFinalRef = useRef('');
+  const hydratedRef = useRef(false);
+  const lastSpokenAssistantIDRef = useRef<string | null>(null);
   const [draft, setDraft] = useState('');
   const [sending, setSending] = useState(false);
   const [listening, setListening] = useState(false);
-  const [speechStatus, setSpeechStatus] = useState('即時語音模式會持續聽寫，邊聽邊顯示，辨識成句後自動送出。');
+  const [voiceReplyEnabled, setVoiceReplyEnabled] = useState(true);
+  const [speechStatus, setSpeechStatus] = useState('夥伴模式會開啟鏡頭、即時聽寫與語音回覆；視覺問題會自動抓目前畫面。');
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const latest = messages[0];
+    if (!latest || latest.role !== 'assistant') return;
+    if (!hydratedRef.current) {
+      hydratedRef.current = true;
+      lastSpokenAssistantIDRef.current = latest.id;
+      return;
+    }
+    if (!voiceReplyEnabled || lastSpokenAssistantIDRef.current === latest.id || !('speechSynthesis' in window)) return;
+    lastSpokenAssistantIDRef.current = latest.id;
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(cleanForSpeech(latest.content));
+    utterance.lang = 'zh-TW';
+    utterance.rate = 1.04;
+    utterance.pitch = 1.02;
+    window.speechSynthesis.speak(utterance);
+  }, [messages, voiceReplyEnabled]);
 
   async function submit(contentOverride?: string) {
     const content = (contentOverride ?? draft).trim();
@@ -52,9 +80,14 @@ export function ChatPanel({ messages, onSend }: ChatPanelProps) {
     setSending(true);
     setError(null);
     try {
-      await onSend(content);
+      if (classifyCompanionCommand(content) === 'vision') {
+        await onVisionCommand(content);
+        setSpeechStatus(`已送出視覺指令：${content}`);
+      } else {
+        await onSend(content);
+        setSpeechStatus(contentOverride ? `已送出：${content}` : '已送出文字指令。');
+      }
       setDraft('');
-      setSpeechStatus(contentOverride ? `已送出：${content}` : '已送出文字指令。');
     } catch (err) {
       setError(err instanceof Error ? err.message : '送出失敗');
     } finally {
@@ -107,7 +140,7 @@ export function ChatPanel({ messages, onSend }: ChatPanelProps) {
         try {
           recognition.start();
           setListening(true);
-          setSpeechStatus('即時語音模式持續中…');
+          setSpeechStatus('夥伴模式持續中：可以直接說話，或問「你看到什麼」。');
         } catch {
           setListening(false);
         }
@@ -138,10 +171,30 @@ export function ChatPanel({ messages, onSend }: ChatPanelProps) {
     setSpeechStatus('已停止即時語音。');
   }
 
+  async function startCompanionMode() {
+    setVoiceReplyEnabled(true);
+    setError(null);
+    try {
+      await onStartCompanion?.();
+      startSpeech();
+      setSpeechStatus('夥伴模式啟動：我會聽你說、看前鏡頭、用文字與語音回覆。');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '夥伴模式啟動失敗');
+    }
+  }
+
   return (
     <section className="panel chat-panel" aria-label="訊息輸入">
       <div className="panel-kicker">COMMAND INPUT</div>
       <h2>對 Desk Robot 說話</h2>
+      <div className="companion-toolbar" aria-label="夥伴模式控制">
+        <button type="button" onClick={startCompanionMode} disabled={sending || listening}>
+          夥伴模式
+        </button>
+        <button type="button" className={voiceReplyEnabled ? '' : 'secondary'} onClick={() => setVoiceReplyEnabled((enabled) => !enabled)}>
+          {voiceReplyEnabled ? '語音回覆開' : '語音回覆關'}
+        </button>
+      </div>
       <div className="message-list">
         {messages.map((message) => (
           <article key={message.id} className={`message message-${message.role}`}>
@@ -163,7 +216,7 @@ export function ChatPanel({ messages, onSend }: ChatPanelProps) {
         <textarea
           value={draft}
           onChange={(event) => setDraft(event.target.value)}
-          placeholder="輸入指令，或按即時語音直接說"
+          placeholder="輸入指令、問「你看到什麼」，或按夥伴模式直接說"
           rows={3}
         />
         <div className="chat-actions">

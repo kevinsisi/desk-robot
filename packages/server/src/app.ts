@@ -37,7 +37,7 @@ const runtimeEvents: RuntimeEvent[] = [
   { id: 'evt-3', type: 'media.permission', safeSummary: '相機與麥克風只會在你手動確認後啟用。', createdAt: bootTime },
 ];
 const messages: ChatMessage[] = [
-  { id: 'msg-1', role: 'assistant', content: '我在線上。你可以用即時語音、文字，或開前鏡頭後按「辨識畫面」。', createdAt: bootTime },
+  { id: 'msg-1', role: 'assistant', content: '我在線上。按「夥伴模式」後，我可以聽你說話、看前鏡頭、讀懂指令，並用文字與語音回覆。', createdAt: bootTime },
 ];
 
 function appendEvent(type: string, safeSummary: string) {
@@ -149,9 +149,9 @@ export function buildApp() {
     },
     activeTask: {
       id: 'runtime-agent',
-      objective: '整合語音、影像辨識、指令理解與回覆互動',
+      objective: '完整桌面夥伴：鏡頭辨識、語音辨識、指令理解、文字與語音回覆互動',
       status: 'in_progress',
-      currentStep: '可接收即時語音/文字與相機截圖，並交給模型回覆。',
+      currentStep: '夥伴模式可開啟前鏡頭與即時語音；視覺問題會送目前畫面給模型，回覆同步顯示並可朗讀。',
       updatedAt: runtimeEvents[0]?.createdAt ?? bootTime,
     },
     approvals: [

@@ -1,11 +1,12 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { fetchState, sendMessage, analyzeVision, type DeskRobotState } from './api/client';
 import { ActivityStream } from './components/ActivityStream';
 import { ApprovalQueue } from './components/ApprovalQueue';
 import { ChatPanel } from './components/ChatPanel';
-import { MediaPermissionPanel } from './components/MediaPermissionPanel';
+import { MediaPermissionPanel, type CompanionStarter, type VisionAnalyzer } from './components/MediaPermissionPanel';
 import { RobotFace } from './components/RobotFace';
 import { TaskPanel } from './components/TaskPanel';
+import { getProductCapabilities } from './companion';
 import { APP_VERSION } from './version';
 
 const fallbackState: DeskRobotState = {
@@ -45,6 +46,8 @@ const fallbackState: DeskRobotState = {
 export function App() {
   const [state, setState] = useState<DeskRobotState>(fallbackState);
   const [loadStatus, setLoadStatus] = useState<'loading' | 'live' | 'fallback'>('loading');
+  const visionAnalyzerRef = useRef<VisionAnalyzer | null>(null);
+  const companionStarterRef = useRef<CompanionStarter | null>(null);
 
   async function refreshState() {
     const nextState = await fetchState();
@@ -74,16 +77,36 @@ export function App() {
     await refreshState();
   }
 
-  async function handleAnalyzeVision(imageDataUrl: string) {
-    await analyzeVision(imageDataUrl, '請辨識前鏡頭畫面，描述你看到的重點，並用 Desk Robot 的口吻回覆下一步建議。');
+  async function handleAnalyzeVision(imageDataUrl: string, prompt?: string) {
+    await analyzeVision(imageDataUrl, prompt ?? '請辨識前鏡頭畫面，描述你看到的重點，並用 Desk Robot 的口吻回覆下一步建議。');
     await refreshState();
   }
+
+  async function handleVisionCommand(content: string) {
+    const analyzer = visionAnalyzerRef.current;
+    if (!analyzer) throw new Error('視覺模組還沒準備好，請重新整理頁面。');
+    await analyzer(`使用者問：「${content}」。請根據目前前鏡頭畫面回答，先講你實際看到的重點，再回答指令。`);
+  }
+
+  async function handleStartCompanion() {
+    const starter = companionStarterRef.current;
+    if (!starter) throw new Error('夥伴模式還沒準備好，請重新整理頁面。');
+    await starter();
+  }
+
+  const registerVisionAnalyzer = useCallback((analyzer: VisionAnalyzer | null) => {
+    visionAnalyzerRef.current = analyzer;
+  }, []);
+
+  const registerCompanionStarter = useCallback((starter: CompanionStarter | null) => {
+    companionStarterRef.current = starter;
+  }, []);
 
   return (
     <main className="app-shell">
       <header className="topbar">
         <div>
-          <p className="eyebrow">DESK ROBOT / PRIVATE CONTROL SURFACE</p>
+          <p className="eyebrow">DESK ROBOT / PRIVATE COMPANION SURFACE</p>
           <h1>桌面機器人控制台</h1>
         </div>
         <div className="topbar-meta">
@@ -98,27 +121,31 @@ export function App() {
           <strong>{state.robot.domain}</strong>
         </div>
         <div>
-          <span>PORT</span>
-          <strong>8723</strong>
+          <span>CAPABILITIES</span>
+          <strong>{getProductCapabilities().join(' / ')}</strong>
         </div>
         <div>
           <span>MEDIA</span>
-          <strong>手動授權</strong>
+          <strong>手動授權、夥伴模式</strong>
         </div>
       </section>
 
       <div className="dashboard-grid">
         <RobotFace state={state.robot} />
         <TaskPanel task={state.activeTask} />
-        <MediaPermissionPanel onAnalyzeVision={handleAnalyzeVision} />
-        <ChatPanel messages={state.messages} onSend={handleSendMessage} />
+        <MediaPermissionPanel
+          onAnalyzeVision={handleAnalyzeVision}
+          onRegisterVisionAnalyzer={registerVisionAnalyzer}
+          onRegisterCompanionStarter={registerCompanionStarter}
+        />
+        <ChatPanel messages={state.messages} onSend={handleSendMessage} onVisionCommand={handleVisionCommand} onStartCompanion={handleStartCompanion} />
         <ApprovalQueue approvals={state.approvals} />
         <ActivityStream events={state.events} />
       </div>
 
       <footer>
         <span>Desk Robot v{APP_VERSION}</span>
-        <span>不使用假活著狀態；畫面只顯示 runtime 可追溯資料。</span>
+        <span>支援鏡頭辨識、語音辨識、指令理解、文字/語音回覆；媒體只在你手動啟用後運作。</span>
       </footer>
     </main>
   );

@@ -41,6 +41,12 @@ export interface DeskRobotState {
   messages: ChatMessage[];
 }
 
+export interface AgentResponse {
+  assistant?: ChatMessage;
+  warning?: string;
+  stateUpdated?: boolean;
+}
+
 export async function fetchState(): Promise<DeskRobotState> {
   const response = await fetch('/api/state');
   if (!response.ok) {
@@ -49,7 +55,7 @@ export async function fetchState(): Promise<DeskRobotState> {
   return response.json() as Promise<DeskRobotState>;
 }
 
-export async function sendMessage(content: string): Promise<void> {
+export async function sendMessage(content: string): Promise<AgentResponse> {
   const response = await fetch('/api/messages', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -58,9 +64,10 @@ export async function sendMessage(content: string): Promise<void> {
   if (!response.ok) {
     throw new Error(`送出失敗：${response.status}`);
   }
+  return response.json() as Promise<AgentResponse>;
 }
 
-export async function recordMediaEvent(kind: 'camera.started' | 'camera.stopped' | 'audio.recorded', safeSummary: string): Promise<void> {
+export async function recordMediaEvent(kind: 'camera.started' | 'camera.stopped' | 'audio.recorded' | 'companion.started', safeSummary: string): Promise<void> {
   await fetch('/api/events', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -68,7 +75,7 @@ export async function recordMediaEvent(kind: 'camera.started' | 'camera.stopped'
   });
 }
 
-export async function analyzeVision(imageDataUrl: string, prompt?: string): Promise<void> {
+export async function analyzeVision(imageDataUrl: string, prompt?: string): Promise<AgentResponse> {
   const response = await fetch('/api/vision/analyze', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -77,4 +84,5 @@ export async function analyzeVision(imageDataUrl: string, prompt?: string): Prom
   if (!response.ok) {
     throw new Error(`影像辨識失敗：${response.status}`);
   }
+  return response.json() as Promise<AgentResponse>;
 }

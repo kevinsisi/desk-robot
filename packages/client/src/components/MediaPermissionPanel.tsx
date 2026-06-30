@@ -1,13 +1,18 @@
-import { useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { recordMediaEvent } from '../api/client';
 
 type PermissionState = 'idle' | 'unsupported' | 'checking' | 'granted' | 'denied' | 'error' | 'previewing' | 'recording' | 'analyzing';
 
+export type VisionAnalyzer = (prompt?: string) => Promise<void>;
+export type CompanionStarter = () => Promise<void>;
+
 interface MediaPermissionPanelProps {
-  onAnalyzeVision: (imageDataUrl: string) => Promise<void>;
+  onAnalyzeVision: (imageDataUrl: string, prompt?: string) => Promise<void>;
+  onRegisterVisionAnalyzer?: (analyzer: VisionAnalyzer | null) => void;
+  onRegisterCompanionStarter?: (starter: CompanionStarter | null) => void;
 }
 
-export function MediaPermissionPanel({ onAnalyzeVision }: MediaPermissionPanelProps) {
+export function MediaPermissionPanel({ onAnalyzeVision, onRegisterVisionAnalyzer, onRegisterCompanionStarter }: MediaPermissionPanelProps) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const cameraStreamRef = useRef<MediaStream | null>(null);
   const recorderRef = useRef<MediaRecorder | null>(null);
@@ -43,9 +48,14 @@ export function MediaPermissionPanel({ onAnalyzeVision }: MediaPermissionPanelPr
     }
   }
 
-  async function startCamera() {
-    if (!navigator.mediaDevices?.getUserMedia) return unsupported();
-    stopCamera(false);
+  const startCamera = useCallback(async () => {
+    if (!navigator.mediaDevices?.getUserMedia) {
+      unsupported();
+      throw new Error('這個瀏覽器不支援相機。');
+    }
+    cameraStreamRef.current?.getTracks().forEach((track) => track.stop());
+    cameraStreamRef.current = null;
+    if (videoRef.current) videoRef.current.srcObject = null;
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' }, audio: false });
       cameraStreamRef.current = stream;
@@ -54,14 +64,16 @@ export function MediaPermissionPanel({ onAnalyzeVision }: MediaPermissionPanelPr
         await videoRef.current.play();
       }
       setState('previewing');
-      setMessage('前鏡頭預覽中。畫面只在本機瀏覽器顯示，沒有上傳。');
+      setMessage('前鏡頭預覽中。畫面只在本機瀏覽器顯示；只有辨識時才會送出單張截圖。');
       void recordMediaEvent('camera.started', '使用者開啟前鏡頭本機預覽。');
     } catch (error) {
       const name = error instanceof DOMException ? error.name : 'UnknownError';
       setState(name === 'NotAllowedError' ? 'denied' : 'error');
-      setMessage(name === 'NotAllowedError' ? '你拒絕了相機權限。' : `前鏡頭啟動失敗：${name}`);
+      const text = name === 'NotAllowedError' ? '你拒絕了相機權限。' : `前鏡頭啟動失敗：${name}`;
+      setMessage(text);
+      throw new Error(text);
     }
-  }
+  }, []);
 
   function stopCamera(record = true) {
     cameraStreamRef.current?.getTracks().forEach((track) => track.stop());
@@ -108,12 +120,11 @@ export function MediaPermissionPanel({ onAnalyzeVision }: MediaPermissionPanelPr
     if (recorderRef.current && recorderRef.current.state !== 'inactive') recorderRef.current.stop();
   }
 
-  async function analyzeCurrentFrame() {
+  const analyzeCurrentFrame = useCallback(async (prompt?: string) => {
+    if (!cameraStreamRef.current) await startCamera();
     const video = videoRef.current;
     if (!video || !cameraStreamRef.current || video.readyState < HTMLMediaElement.HAVE_CURRENT_DATA) {
-      setState('error');
-      setMessage('請先開前鏡頭，等畫面出現後再按「辨識畫面」。');
-      return;
+      throw new Error('請先開前鏡頭，等畫面出現後再辨識。');
     }
 
     const previousState = state;
@@ -127,14 +138,32 @@ export function MediaPermissionPanel({ onAnalyzeVision }: MediaPermissionPanelPr
       if (!context) throw new Error('canvas_unavailable');
       context.drawImage(video, 0, 0, canvas.width, canvas.height);
       const imageDataUrl = canvas.toDataURL('image/jpeg', 0.82);
-      await onAnalyzeVision(imageDataUrl);
+      await onAnalyzeVision(imageDataUrl, prompt);
       setState(cameraStreamRef.current ? 'previewing' : 'granted');
       setMessage('已完成畫面辨識，回覆已出現在對話區。前鏡頭仍只在你手動開啟時運作。');
     } catch (error) {
       setState(previousState === 'previewing' ? 'previewing' : 'error');
-      setMessage(error instanceof Error ? `畫面辨識失敗：${error.message}` : '畫面辨識失敗。');
+      const text = error instanceof Error ? `畫面辨識失敗：${error.message}` : '畫面辨識失敗。';
+      setMessage(text);
+      throw new Error(text);
     }
-  }
+  }, [onAnalyzeVision, startCamera, state]);
+
+  const startCompanion = useCallback(async () => {
+    await startCamera();
+    await recordMediaEvent('companion.started', '使用者啟動夥伴模式：前鏡頭、即時語音與語音回覆。');
+    setMessage('夥伴模式已開：你可以直接說話，問「你看到什麼」會自動抓目前畫面辨識。');
+  }, [startCamera]);
+
+  useEffect(() => {
+    onRegisterVisionAnalyzer?.(analyzeCurrentFrame);
+    return () => onRegisterVisionAnalyzer?.(null);
+  }, [analyzeCurrentFrame, onRegisterVisionAnalyzer]);
+
+  useEffect(() => {
+    onRegisterCompanionStarter?.(startCompanion);
+    return () => onRegisterCompanionStarter?.(null);
+  }, [onRegisterCompanionStarter, startCompanion]);
 
   return (
     <section className="panel media-panel" aria-label="相機與麥克風權限">
@@ -151,7 +180,7 @@ export function MediaPermissionPanel({ onAnalyzeVision }: MediaPermissionPanelPr
         <button type="button" onClick={state === 'previewing' ? () => stopCamera() : startCamera} disabled={state === 'recording' || state === 'analyzing'}>
           {state === 'previewing' ? '關閉前鏡頭' : '開前鏡頭'}
         </button>
-        <button type="button" onClick={analyzeCurrentFrame} disabled={state !== 'previewing'}>
+        <button type="button" onClick={() => void analyzeCurrentFrame()} disabled={state === 'recording' || state === 'analyzing'}>
           {state === 'analyzing' ? '辨識中…' : '辨識畫面'}
         </button>
         <button type="button" onClick={state === 'recording' ? stopRecording : startRecording} disabled={state === 'analyzing'}>
