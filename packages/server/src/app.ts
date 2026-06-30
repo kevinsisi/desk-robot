@@ -1,5 +1,8 @@
+import { existsSync } from 'node:fs';
+import { join } from 'node:path';
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
+import fastifyStatic from '@fastify/static';
 import { SERVER_VERSION } from './config.js';
 
 const now = new Date().toISOString();
@@ -45,5 +48,25 @@ export function buildApp() {
     events: runtimeEvents,
   }));
 
+  const staticRoot = process.env.STATIC_ROOT;
+  if (staticRoot && existsSync(staticRoot)) {
+    app.register(fastifyStatic, {
+      root: staticRoot,
+      prefix: '/',
+      wildcard: false,
+    });
+
+    app.setNotFoundHandler(async (request, reply) => {
+      if (request.url.startsWith('/api/') || request.url === '/health') {
+        return reply.status(404).send({ error: 'not_found' });
+      }
+      return reply.sendFile('index.html');
+    });
+  }
+
   return app;
+}
+
+export function resolveClientDistFromCwd() {
+  return join(process.cwd(), 'packages/client/dist');
 }

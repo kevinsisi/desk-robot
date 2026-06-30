@@ -67,9 +67,9 @@
 
 ## 9. Verification and Follow-through
 
-- [ ] 9.1 Run `npm run typecheck` from the repo root.
-- [ ] 9.2 Run `npm run test` from the repo root.
-- [ ] 9.3 Run `npm run build` from the repo root.
+- [x] 9.1 Run `npm run typecheck` from the repo root.
+- [x] 9.2 Run `npm run test` from the repo root.
+- [x] 9.3 Run `npm run build` from the repo root.
 - [ ] 9.4 Verify `https://robot.sisihome.org` loads through HTTPS after deployment so browser camera/microphone APIs are available.
 - [ ] 9.5 Update OpenSpec artifacts if implementation changes requirements or design.
 - [ ] 9.6 Commit the completed logical unit with a conventional commit message.

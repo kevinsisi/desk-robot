@@ -1,0 +1,15 @@
+services:
+  desk-robot:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    image: desk-robot:local
+    container_name: desk-robot
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      HOST: 0.0.0.0
+      PORT: 8723
+      STATIC_ROOT: /app/packages/client/dist
+    ports:
+      - "8723:8723"

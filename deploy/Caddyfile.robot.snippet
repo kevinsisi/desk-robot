@@ -1,0 +1,12 @@
+@robot host robot.sisihome.org
+handle @robot {
+    reverse_proxy 127.0.0.1:8723 {
+        flush_interval -1
+    }
+}
+
+http://robot.sisihome {
+    reverse_proxy 127.0.0.1:8723 {
+        flush_interval -1
+    }
+}
