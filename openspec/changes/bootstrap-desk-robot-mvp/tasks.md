@@ -26,7 +26,7 @@
 
 - [ ] 4.1 Define runtime/task/message/event TypeScript types.
 - [ ] 4.2 Implement runtime service for current state projection from persisted records.
-- [ ] 4.3 Implement message append flow that stores the message and runtime event.
+- [x] 4.3 Implement message append flow that stores the message and runtime event (in-memory MVP; SQLite persistence remains Task 3).
 - [ ] 4.4 Implement active task update and cancellation flows.
 - [ ] 4.5 Add `GET /api/state`, `POST /api/messages`, and `POST /api/tasks/:id/cancel` routes.
 - [ ] 4.6 Add tests for resume-after-restart, message append, requirement update, and cancellation behavior.
@@ -56,7 +56,7 @@
 - [x] 7.4 Implement `ApprovalQueue` with approve/deny controls and risk summaries.
 - [x] 7.5 Ensure all user-facing copy is Traditional Chinese and mobile-first touch targets are at least 44px.
 - [x] 7.6 Add explicit camera/microphone permission probe UI that only starts after user action and handles denied/non-secure-origin states.
-- [x] 7.7 Add component or integration tests for idle state, active task state, pending approval display, and media permission states.
+- [x] 7.7 Add component or integration tests for idle state, active task state, pending approval display, media permission states, and message append behavior.
 
 ## 8. Runtime Event Streaming
 

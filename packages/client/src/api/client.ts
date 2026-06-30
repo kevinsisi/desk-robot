@@ -5,6 +5,13 @@ export interface RuntimeEvent {
   createdAt: string;
 }
 
+export interface ChatMessage {
+  id: string;
+  role: 'user' | 'assistant';
+  content: string;
+  createdAt: string;
+}
+
 export interface ApprovalRequest {
   id: string;
   toolName: string;
@@ -31,6 +38,7 @@ export interface DeskRobotState {
   } | null;
   approvals: ApprovalRequest[];
   events: RuntimeEvent[];
+  messages: ChatMessage[];
 }
 
 export async function fetchState(): Promise<DeskRobotState> {
@@ -39,4 +47,15 @@ export async function fetchState(): Promise<DeskRobotState> {
     throw new Error(`讀取狀態失敗：${response.status}`);
   }
   return response.json() as Promise<DeskRobotState>;
+}
+
+export async function sendMessage(content: string): Promise<void> {
+  const response = await fetch('/api/messages', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ content }),
+  });
+  if (!response.ok) {
+    throw new Error(`送出失敗：${response.status}`);
+  }
 }

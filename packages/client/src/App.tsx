@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
-import { fetchState, type DeskRobotState } from './api/client';
+import { fetchState, sendMessage, type DeskRobotState } from './api/client';
 import { ActivityStream } from './components/ActivityStream';
 import { ApprovalQueue } from './components/ApprovalQueue';
+import { ChatPanel } from './components/ChatPanel';
 import { MediaPermissionPanel } from './components/MediaPermissionPanel';
 import { RobotFace } from './components/RobotFace';
 import { TaskPanel } from './components/TaskPanel';
@@ -36,11 +37,20 @@ const fallbackState: DeskRobotState = {
     { id: 'local-1', type: 'ui.render', safeSummary: '第一版 UI 已用本機資料渲染。', createdAt: new Date().toISOString() },
     { id: 'local-2', type: 'guardrail.media', safeSummary: '沒有背景錄音錄影；只支援手動測試權限。', createdAt: new Date().toISOString() },
   ],
+  messages: [
+    { id: 'local-msg-1', role: 'assistant', content: '本機預覽已啟動。', createdAt: new Date().toISOString() },
+  ],
 };
 
 export function App() {
   const [state, setState] = useState<DeskRobotState>(fallbackState);
   const [loadStatus, setLoadStatus] = useState<'loading' | 'live' | 'fallback'>('loading');
+
+  async function refreshState() {
+    const nextState = await fetchState();
+    setState(nextState);
+    setLoadStatus('live');
+  }
 
   useEffect(() => {
     let cancelled = false;
@@ -58,6 +68,11 @@ export function App() {
       cancelled = true;
     };
   }, []);
+
+  async function handleSendMessage(content: string) {
+    await sendMessage(content);
+    await refreshState();
+  }
 
   return (
     <main className="app-shell">
@@ -91,6 +106,7 @@ export function App() {
         <RobotFace state={state.robot} />
         <TaskPanel task={state.activeTask} />
         <MediaPermissionPanel />
+        <ChatPanel messages={state.messages} onSend={handleSendMessage} />
         <ApprovalQueue approvals={state.approvals} />
         <ActivityStream events={state.events} />
       </div>
