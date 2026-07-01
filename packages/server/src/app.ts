@@ -149,9 +149,9 @@ export function buildApp() {
     },
     activeTask: {
       id: 'runtime-agent',
-      objective: '完整桌面夥伴：鏡頭辨識、語音辨識、指令理解、文字與語音回覆互動',
+      objective: '手機終端：用手機當 Desk Bot 的眼睛、耳朵與回覆介面',
       status: 'in_progress',
-      currentStep: '夥伴模式可開啟前鏡頭與即時語音；視覺問題會送目前畫面給模型，回覆同步顯示並可朗讀。',
+      currentStep: '手機網頁可開啟前鏡頭與即時語音；視覺問題會送目前畫面給模型，回覆同步顯示並可朗讀。',
       updatedAt: runtimeEvents[0]?.createdAt ?? bootTime,
     },
     approvals: [

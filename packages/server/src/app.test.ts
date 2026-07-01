@@ -14,7 +14,8 @@ it('returns evidence-backed state projection', async () => {
   expect(response.statusCode).toBe(200);
   const body = response.json();
   expect(body.robot.domain).toBe('https://robot.sisihome.org');
-  expect(body.activeTask.objective).toContain('互動');
+  expect(body.activeTask.objective).toContain('手機終端');
+  expect(body.activeTask.objective).toContain('眼睛、耳朵');
   expect(body.approvals[0].toolName).toBe('browser.mediaDevices.getUserMedia');
   expect(body.messages[0].role).toBe('assistant');
 });

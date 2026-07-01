@@ -19,9 +19,9 @@ const fallbackState: DeskRobotState = {
   },
   activeTask: {
     id: 'local-ui-preview',
-    objective: '呈現第一版控制台外觀',
+    objective: '手機終端：用手機當 Desk Bot 的眼睛、耳朵與回覆介面',
     status: 'in_progress',
-    currentStep: 'server 還沒啟動時，先用本機 fallback projection。',
+    currentStep: 'server 還沒啟動時，仍維持手機優先的相機、語音與輸入體驗。',
     updatedAt: new Date().toISOString(),
   },
   approvals: [
@@ -35,7 +35,7 @@ const fallbackState: DeskRobotState = {
     },
   ],
   events: [
-    { id: 'local-1', type: 'ui.render', safeSummary: '第一版 UI 已用本機資料渲染。', createdAt: new Date().toISOString() },
+    { id: 'local-1', type: 'ui.render', safeSummary: '手機終端 UI 已用本機資料渲染。', createdAt: new Date().toISOString() },
     { id: 'local-2', type: 'guardrail.media', safeSummary: '沒有背景錄音錄影；只支援手動測試權限。', createdAt: new Date().toISOString() },
   ],
   messages: [
@@ -111,7 +111,7 @@ export function App() {
   const latestAssistantLine = state.messages.find((message) => message.role === 'assistant')?.content;
 
   return (
-    <main className="app-shell companion-shell">
+    <main className="app-shell companion-shell phone-terminal-shell">
       <header className="minimal-topbar">
         <span>Desk Bot</span>
         <span className={`load-pill load-${loadStatus}`}>{loadStatus === 'live' ? '在線' : loadStatus === 'fallback' ? '預覽' : '讀取中'}</span>
