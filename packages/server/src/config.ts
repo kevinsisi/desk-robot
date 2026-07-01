@@ -1,4 +1,4 @@
-export const SERVER_VERSION = '0.2.2';
+export const SERVER_VERSION = '0.2.3';
 
 export interface ServerConfig {
   host: string;

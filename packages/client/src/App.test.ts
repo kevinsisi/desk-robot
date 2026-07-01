@@ -11,7 +11,7 @@ afterEach(() => {
 });
 
 it('exposes app version', () => {
-  expect(APP_VERSION).toBe('0.2.2');
+  expect(APP_VERSION).toBe('0.2.3');
 });
 
 it('presents the product as a phone terminal instead of a desktop console', async () => {
@@ -78,4 +78,29 @@ it('uses the assistant response emotion module when it is provided', async () =>
 
   await vi.waitFor(() => expect(document.body.textContent).toContain('我有點難過'));
   expect(document.querySelector('.expression-sad')).not.toBeNull();
+});
+
+it('shows a laughing face for joke-like assistant replies', async () => {
+  vi.stubGlobal('fetch', vi.fn(() => Promise.resolve(new Response(JSON.stringify({
+    robot: {
+      name: 'Desk Bot',
+      state: 'idle',
+      label: '待命中',
+      domain: 'https://robot.sisihome.org',
+      secureContextRequired: true,
+    },
+    activeTask: null,
+    approvals: [],
+    events: [],
+    messages: [
+      { id: 'joke-assistant', role: 'assistant', content: '為什麼機器人不怕感冒？因為它都有防火牆，不會中毒。', emotion: 'laughing', createdAt: new Date().toISOString() },
+    ],
+  }), { status: 200, headers: { 'Content-Type': 'application/json' } }))));
+
+  const host = document.createElement('div');
+  document.body.appendChild(host);
+  createRoot(host).render(createElement(App));
+
+  await vi.waitFor(() => expect(document.body.textContent).toContain('哈哈～'));
+  expect(document.querySelector('.expression-laughing')).not.toBeNull();
 });

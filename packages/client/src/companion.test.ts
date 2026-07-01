@@ -45,6 +45,7 @@ describe('robot expression model', () => {
     expect(getRobotExpression({ state: 'idle', label: '正在聽語音' })).toBe('listening');
     expect(getRobotExpression({ state: 'idle', label: '收到指令', lastLine: '已恢復正常模式。' })).toBe('curious');
     expect(getRobotExpression({ state: 'thinking', lastLine: '可以做這個可愛表情：嘴巴微微嘟起，像啾一下。' })).toBe('playful');
+    expect(getRobotExpression({ state: 'idle', lastLine: '為什麼機器人不怕感冒？因為它都有防火牆，不會中毒。' })).toBe('laughing');
     expect(getRobotExpression({ state: 'idle', lastLine: '嗚嗚……我難過到小機器人燈都變藍了(;´ω`;)' })).toBe('sad');
     expect(getRobotExpression({ state: 'idle', lastLine: '相機權限被拒絕，暫時無法看畫面。' })).toBe('worried');
   });
@@ -54,5 +55,6 @@ describe('robot expression model', () => {
     expect(getRobotExpressionHeadline('listening')).toBe('我在聽你說');
     expect(getRobotExpressionHeadline('sad')).toBe('我有點難過');
     expect(getRobotExpressionHeadline('playful')).toBe('啾一下～');
+    expect(getRobotExpressionHeadline('laughing')).toBe('哈哈～');
   });
 });

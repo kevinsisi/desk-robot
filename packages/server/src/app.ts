@@ -21,7 +21,7 @@ interface ChatMessage {
   emotion?: RobotEmotion;
 }
 
-type RobotEmotion = 'curious' | 'thinking' | 'happy' | 'worried' | 'sad' | 'seeing' | 'listening' | 'playful';
+type RobotEmotion = 'curious' | 'thinking' | 'happy' | 'worried' | 'sad' | 'seeing' | 'listening' | 'playful' | 'laughing';
 
 interface HermesChatMessage {
   role: string;
@@ -51,12 +51,14 @@ const messages: ChatMessage[] = [
 const blockedPattern = /(卡住|失敗|錯誤|抱歉|不能|無法|權限|拒絕|denied|error|failed)/i;
 const sadPattern = /(難過|傷心|嗚嗚|哭|淚|眼淚|寂寞|沮喪|委屈|失落|低落|不開心|心情不好|小機器人燈都變藍|變藍了|QQ|;´ω`)/;
 const playfulPattern = /(可愛|啾|嘟|撒嬌|笑一下|眨眼|歪一邊|表情)/;
+const jokePattern = /(笑話|冷笑話|哈哈|呵呵|噗|XDD|XD|www|為什麼.+因為|怎麼.+因為|不怕.+因為)/i;
 const seeingPattern = /(看到|看見|鏡頭|畫面|眼睛|正面|桌上|前面|辨識|觀察|看著|影像|截圖)/;
 const listeningPattern = /(正在聽|聽你說|說話|語音|麥克風|耳朵|陪我)/;
 
 function inferAssistantEmotion(content: string, fallback: RobotEmotion = 'happy'): RobotEmotion {
   if (blockedPattern.test(content)) return 'worried';
   if (sadPattern.test(content)) return 'sad';
+  if (jokePattern.test(content)) return 'laughing';
   if (playfulPattern.test(content)) return 'playful';
   if (seeingPattern.test(content)) return 'seeing';
   if (listeningPattern.test(content)) return 'listening';
