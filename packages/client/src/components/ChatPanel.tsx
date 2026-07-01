@@ -56,6 +56,7 @@ export function ChatPanel({ messages, onSend, onVisionCommand, onRegisterSpeechS
   const [listening, setListening] = useState(false);
   const [voiceReplyEnabled, setVoiceReplyEnabled] = useState(true);
   const [speechStatus, setSpeechStatus] = useState('夥伴模式會開啟鏡頭、即時聽寫與語音回覆；視覺問題會自動抓目前畫面。');
+  const [pendingAudioUrl, setPendingAudioUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -73,14 +74,22 @@ export function ChatPanel({ messages, onSend, onVisionCommand, onRegisterSpeechS
     if (currentAudioUrlRef.current) URL.revokeObjectURL(currentAudioUrlRef.current);
     currentAudioRef.current = null;
     currentAudioUrlRef.current = null;
+    setPendingAudioUrl(null);
     void synthesizeSpeech(cleanForSpeech(latest.content))
-      .then((audioBlob) => {
+      .then(async (audioBlob) => {
         if (cancelled) return;
         const audioUrl = URL.createObjectURL(audioBlob);
         const audio = new Audio(audioUrl);
+        audio.setAttribute('playsinline', 'true');
         currentAudioUrlRef.current = audioUrl;
         currentAudioRef.current = audio;
-        return audio.play();
+        setPendingAudioUrl(audioUrl);
+        try {
+          await audio.play();
+          if (!cancelled) setSpeechStatus('已播放 AI 語音回覆。');
+        } catch {
+          if (!cancelled) setSpeechStatus('AI 語音已產生，但手機瀏覽器擋下自動播放；請按「播放語音回覆」。');
+        }
       })
       .catch(() => {
         if (!cancelled) setSpeechStatus('AI 語音暫時產生失敗，已保留文字回覆。');
@@ -189,6 +198,17 @@ export function ChatPanel({ messages, onSend, onVisionCommand, onRegisterSpeechS
     setSpeechStatus('已停止即時語音。');
   }
 
+  async function playPendingAudio() {
+    const audio = currentAudioRef.current;
+    if (!audio || !pendingAudioUrl) return;
+    try {
+      await audio.play();
+      setSpeechStatus('已播放 AI 語音回覆。');
+    } catch {
+      setSpeechStatus('手機瀏覽器仍拒絕播放；請確認不是靜音模式，或再點一次播放。');
+    }
+  }
+
   useEffect(() => {
     onRegisterSpeechStarter?.(startSpeech);
     return () => onRegisterSpeechStarter?.(null);
@@ -230,6 +250,11 @@ export function ChatPanel({ messages, onSend, onVisionCommand, onRegisterSpeechS
             {sending ? '送出中…' : '送出'}
           </button>
         </div>
+        {pendingAudioUrl ? (
+          <button type="button" className="secondary" onClick={() => void playPendingAudio()}>
+            播放語音回覆
+          </button>
+        ) : null}
       </form>
       {error ? <p className="error-text">{error}</p> : <p className={listening ? 'live-text' : 'muted'}>{speechStatus}</p>}
     </section>
