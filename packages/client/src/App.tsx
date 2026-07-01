@@ -58,18 +58,34 @@ export function App() {
 
   useEffect(() => {
     let cancelled = false;
-    fetchState()
-      .then((nextState) => {
-        if (!cancelled) {
-          setState(nextState);
-          setLoadStatus('live');
-        }
-      })
-      .catch(() => {
-        if (!cancelled) setLoadStatus('fallback');
-      });
+    let timer: ReturnType<typeof setInterval> | null = null;
+
+    const syncState = () => {
+      fetchState()
+        .then((nextState) => {
+          if (!cancelled) {
+            setState(nextState);
+            setLoadStatus('live');
+          }
+        })
+        .catch(() => {
+          if (!cancelled) setLoadStatus('fallback');
+        });
+    };
+
+    syncState();
+    timer = setInterval(syncState, 2500);
+    const handleVisibility = () => {
+      if (!document.hidden) syncState();
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+    window.addEventListener('focus', syncState);
+
     return () => {
       cancelled = true;
+      if (timer) clearInterval(timer);
+      document.removeEventListener('visibilitychange', handleVisibility);
+      window.removeEventListener('focus', syncState);
     };
   }, []);
 
