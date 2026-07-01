@@ -198,6 +198,9 @@ p { line-height: 1.65; }
 .status-line, .button-row, .robot-state-row { display: flex; gap: 10px; align-items: center; justify-content: space-between; }
 .chat-form { display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: stretch; }
 .chat-actions { display: grid; grid-template-columns: 1fr; gap: 8px; }
+.voice-playback { grid-column: 1 / -1; display: grid; gap: 8px; }
+.voice-playback audio { width: 100%; }
+.voice-playback button { width: 100%; }
 .chat-actions button:first-child { background: rgba(24,49,44,0.1); color: var(--ink); box-shadow: none; }
 .live-text { color: #168866; font-weight: 800; }
 .muted { display: none; color: var(--soft-ink); }

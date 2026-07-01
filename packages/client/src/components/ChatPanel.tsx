@@ -251,9 +251,12 @@ export function ChatPanel({ messages, onSend, onVisionCommand, onRegisterSpeechS
           </button>
         </div>
         {pendingAudioUrl ? (
-          <button type="button" className="secondary" onClick={() => void playPendingAudio()}>
-            播放語音回覆
-          </button>
+          <div className="voice-playback">
+            <audio controls src={pendingAudioUrl} preload="auto" />
+            <button type="button" className="secondary" onClick={() => void playPendingAudio()}>
+              播放語音回覆
+            </button>
+          </div>
         ) : null}
       </form>
       {error ? <p className="error-text">{error}</p> : <p className={listening ? 'live-text' : 'muted'}>{speechStatus}</p>}
