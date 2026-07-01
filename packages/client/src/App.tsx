@@ -11,7 +11,7 @@ import { APP_VERSION } from './version';
 
 const fallbackState: DeskRobotState = {
   robot: {
-    name: 'Desk Robot',
+    name: 'Desk Bot',
     state: 'idle',
     label: '本機預覽',
     domain: 'https://robot.sisihome.org',
@@ -79,7 +79,7 @@ export function App() {
   }
 
   async function handleAnalyzeVision(imageDataUrl: string, prompt?: string) {
-    await analyzeVision(imageDataUrl, prompt ?? '請辨識前鏡頭畫面，描述你看到的重點，並用 Desk Robot 的口吻回覆下一步建議。');
+    await analyzeVision(imageDataUrl, prompt ?? '請辨識前鏡頭畫面，描述你看到的重點，並用 Desk Bot 的口吻回覆下一步建議。');
     await refreshState();
   }
 
@@ -108,7 +108,7 @@ export function App() {
     speechStarterRef.current = starter;
   }, []);
 
-  const latestAssistantLine = [...state.messages].reverse().find((message) => message.role === 'assistant')?.content;
+  const latestAssistantLine = state.messages.find((message) => message.role === 'assistant')?.content;
 
   return (
     <main className="app-shell companion-shell phone-terminal-shell">

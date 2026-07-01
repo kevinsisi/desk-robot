@@ -180,7 +180,7 @@ export function ChatPanel({ messages, onSend, onVisionCommand, onRegisterSpeechS
   return (
     <section className="panel chat-panel" aria-label="訊息輸入">
       <div className="panel-kicker">COMMAND INPUT</div>
-      <h2>對 Desk Robot 說話</h2>
+      <h2>對 Desk Bot 說話</h2>
       <div className="message-list">
         {messages.map((message) => (
           <article key={message.id} className={`message message-${message.role}`}>

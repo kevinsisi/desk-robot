@@ -141,7 +141,7 @@ export function buildApp() {
 
   app.get('/api/state', async () => ({
     robot: {
-      name: 'Desk Robot',
+      name: 'Desk Bot',
       state: messages.length > 1 ? 'thinking' : 'idle',
       label: messages.length > 1 ? '收到指令' : '待命中',
       domain: 'https://robot.sisihome.org',
@@ -171,11 +171,11 @@ export function buildApp() {
   app.post<{ Body: { content?: string } }>('/api/messages', async (request, reply) => {
     try {
       const userMessage = appendUserMessage(String(request.body?.content ?? ''));
-      appendEvent('agent.thinking', 'Desk Robot 正在理解指令並產生回覆。');
+      appendEvent('agent.thinking', 'Desk Bot 正在理解指令並產生回覆。');
       try {
         const answer = await askAgent(userMessage.content);
         const assistant = appendMessage('assistant', answer);
-        appendEvent('agent.replied', `Desk Robot 已回覆：${answer.slice(0, 80)}`);
+        appendEvent('agent.replied', `Desk Bot 已回覆：${answer.slice(0, 80)}`);
         return reply.status(201).send({ message: userMessage, assistant, stateUpdated: true });
       } catch (error) {
         const detail = error instanceof Error ? error.message : 'unknown';
