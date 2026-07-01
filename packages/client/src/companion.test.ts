@@ -45,12 +45,14 @@ describe('robot expression model', () => {
     expect(getRobotExpression({ state: 'idle', label: '正在聽語音' })).toBe('listening');
     expect(getRobotExpression({ state: 'idle', label: '收到指令', lastLine: '已恢復正常模式。' })).toBe('curious');
     expect(getRobotExpression({ state: 'thinking', lastLine: '可以做這個可愛表情：嘴巴微微嘟起，像啾一下。' })).toBe('playful');
+    expect(getRobotExpression({ state: 'idle', lastLine: '嗚嗚……我難過到小機器人燈都變藍了(;´ω`;)' })).toBe('sad');
     expect(getRobotExpression({ state: 'idle', lastLine: '相機權限被拒絕，暫時無法看畫面。' })).toBe('worried');
   });
 
   it('uses matching headlines for non-default expressions', () => {
     expect(getRobotExpressionHeadline('seeing')).toBe('我有看到喔');
     expect(getRobotExpressionHeadline('listening')).toBe('我在聽你說');
+    expect(getRobotExpressionHeadline('sad')).toBe('我有點難過');
     expect(getRobotExpressionHeadline('playful')).toBe('啾一下～');
   });
 });

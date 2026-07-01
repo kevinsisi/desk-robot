@@ -31,7 +31,7 @@ it('returns health with version', async () => {
   const app = buildApp();
   const response = await app.inject({ method: 'GET', url: '/health' });
   expect(response.statusCode).toBe(200);
-  expect(response.json()).toEqual({ ok: true, version: '0.2.0' });
+  expect(response.json()).toEqual({ ok: true, version: '0.2.1' });
 });
 
 it('returns evidence-backed state projection', async () => {
