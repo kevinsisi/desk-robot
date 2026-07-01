@@ -57,6 +57,7 @@
 - [x] 7.5 Ensure all user-facing copy is Traditional Chinese and mobile-first touch targets are at least 44px.
 - [x] 7.6 Add explicit camera/microphone permission probe UI, front-camera preview, and local audio recording controls that only start after user action and handle denied/non-secure-origin states.
 - [x] 7.7 Add component or integration tests for idle state, active task state, pending approval display, media permission states, and message append behavior.
+- [x] 7.8 Replace browser/OS speech synthesis with server-side AI TTS for assistant replies, using Taiwanese Mandarin instructions and no mechanical fallback.
 
 ## 8. Runtime Event Streaming
 

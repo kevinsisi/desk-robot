@@ -47,6 +47,18 @@ export interface AgentResponse {
   stateUpdated?: boolean;
 }
 
+export async function synthesizeSpeech(text: string): Promise<Blob> {
+  const response = await fetch('/api/tts', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ text }),
+  });
+  if (!response.ok) {
+    throw new Error(`語音產生失敗：${response.status}`);
+  }
+  return response.blob();
+}
+
 export async function fetchState(): Promise<DeskRobotState> {
   const response = await fetch('/api/state');
   if (!response.ok) {

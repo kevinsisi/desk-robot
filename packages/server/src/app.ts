@@ -1,5 +1,6 @@
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
+import { EdgeTTS, Constants } from '@andresaya/edge-tts';
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
 import fastifyStatic from '@fastify/static';
@@ -106,6 +107,47 @@ function extractAssistantText(response: Record<string, unknown>) {
   return text || '我收到指令了，但這次沒有取得模型文字回覆。';
 }
 
+function cleanTtsInput(text: string) {
+  return text.replace(/`{1,3}/g, '').replace(/https?:\/\/\S+/g, '網址').trim().slice(0, 900);
+}
+
+async function synthesizeWithOpenAI(text: string) {
+  const apiKey = process.env.OPENAI_API_KEY;
+  if (!apiKey) throw new Error('tts_not_configured');
+
+  const response = await fetch('https://api.openai.com/v1/audio/speech', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      model: process.env.DESK_BOT_TTS_MODEL ?? 'gpt-4o-mini-tts',
+      voice: process.env.DESK_BOT_TTS_VOICE ?? 'coral',
+      input: cleanTtsInput(text),
+      response_format: 'mp3',
+      instructions: '請用自然、年輕、溫暖的台灣華語口吻朗讀；語速略快但清楚，不要中國腔，不要播報腔，不要機械感。',
+    }),
+  });
+  const audio = Buffer.from(await response.arrayBuffer());
+  if (!response.ok) {
+    throw new Error(`${response.status} ${audio.toString('utf8').slice(0, 300)}`);
+  }
+  return { audio, contentType: response.headers.get('content-type') ?? 'audio/mpeg', provider: 'openai' };
+}
+
+async function synthesizeTts(text: string) {
+  if (process.env.OPENAI_API_KEY) return synthesizeWithOpenAI(text);
+
+  const edge = new EdgeTTS();
+  await edge.synthesize(text, process.env.DESK_BOT_EDGE_TTS_VOICE ?? 'zh-TW-HsiaoChenNeural', {
+    rate: process.env.DESK_BOT_EDGE_TTS_RATE ?? '+8%',
+    pitch: process.env.DESK_BOT_EDGE_TTS_PITCH ?? '+0Hz',
+    outputFormat: Constants.OUTPUT_FORMAT.AUDIO_24KHZ_48KBITRATE_MONO_MP3,
+  });
+  return { audio: edge.toBuffer(), contentType: 'audio/mpeg', provider: 'edge-tts' };
+}
+
 async function askAgent(text: string, imageDataUrl?: string) {
   if (process.env.NODE_ENV === 'test') {
     return imageDataUrl ? `測試模式已辨識影像指令：${text}` : `測試模式已收到指令：${text}`;
@@ -167,6 +209,22 @@ export function buildApp() {
     events: runtimeEvents.slice(0, 12),
     messages: messages.slice(0, 20),
   }));
+
+  app.post<{ Body: { text?: string } }>('/api/tts', async (request, reply) => {
+    const text = cleanTtsInput(String(request.body?.text ?? ''));
+    if (!text) return reply.status(400).send({ error: 'empty_text', message: '朗讀文字不能是空白。' });
+    try {
+      const result = await synthesizeTts(text);
+      return reply
+        .header('Content-Type', result.contentType)
+        .header('Cache-Control', 'no-store')
+        .header('X-TTS-Provider', result.provider)
+        .send(result.audio);
+    } catch (error) {
+      const detail = error instanceof Error ? error.message : 'unknown';
+      return reply.status(502).send({ error: 'tts_failed', message: detail.slice(0, 300) });
+    }
+  });
 
   app.post<{ Body: { content?: string } }>('/api/messages', async (request, reply) => {
     try {

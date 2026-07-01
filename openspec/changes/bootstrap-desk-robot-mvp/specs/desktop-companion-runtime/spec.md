@@ -36,3 +36,19 @@ The system SHALL expose robot status, active task status, and recent activity on
 
 - **WHEN** there are no recent runtime events
 - **THEN** the UI state endpoint SHALL return an idle state without invented activity messages
+
+### Requirement: Companion replies use AI TTS
+
+The system SHALL synthesize Desk Bot voice replies through a server-side AI or neural TTS provider instead of browser or OS speech-synthesis voices.
+
+#### Scenario: Assistant reply is spoken naturally
+
+- **WHEN** a new assistant message appears and voice reply is enabled
+- **THEN** the client SHALL request `/api/tts` and play the returned audio
+- **AND** the server SHALL prefer OpenAI TTS when configured or otherwise use Taiwanese Mandarin Edge neural TTS
+- **AND** the client SHALL NOT use browser `speechSynthesis` as a fallback
+
+#### Scenario: AI TTS text is blank
+
+- **WHEN** `/api/tts` receives empty text
+- **THEN** it SHALL return `400 empty_text` without generating audio

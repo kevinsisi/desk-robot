@@ -11,5 +11,10 @@ services:
       HOST: 0.0.0.0
       PORT: 8723
       STATIC_ROOT: /app/packages/client/dist
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      DESK_BOT_TTS_MODEL: ${DESK_BOT_TTS_MODEL:-gpt-4o-mini-tts}
+      DESK_BOT_TTS_VOICE: ${DESK_BOT_TTS_VOICE:-coral}
+      DESK_BOT_EDGE_TTS_VOICE: ${DESK_BOT_EDGE_TTS_VOICE:-zh-TW-HsiaoChenNeural}
+      DESK_BOT_EDGE_TTS_RATE: ${DESK_BOT_EDGE_TTS_RATE:-+8%}
     ports:
       - "8723:8723"

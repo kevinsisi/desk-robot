@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import type { ChatMessage } from '../api/client';
+import { synthesizeSpeech } from '../api/client';
 import { classifyCompanionCommand } from '../companion';
 
 declare global {
@@ -48,6 +49,8 @@ export function ChatPanel({ messages, onSend, onVisionCommand, onRegisterSpeechS
   const lastFinalRef = useRef('');
   const hydratedRef = useRef(false);
   const lastSpokenAssistantIDRef = useRef<string | null>(null);
+  const currentAudioRef = useRef<HTMLAudioElement | null>(null);
+  const currentAudioUrlRef = useRef<string | null>(null);
   const [draft, setDraft] = useState('');
   const [sending, setSending] = useState(false);
   const [listening, setListening] = useState(false);
@@ -63,14 +66,28 @@ export function ChatPanel({ messages, onSend, onVisionCommand, onRegisterSpeechS
       lastSpokenAssistantIDRef.current = latest.id;
       return;
     }
-    if (!voiceReplyEnabled || lastSpokenAssistantIDRef.current === latest.id || !('speechSynthesis' in window)) return;
+    if (!voiceReplyEnabled || lastSpokenAssistantIDRef.current === latest.id) return;
     lastSpokenAssistantIDRef.current = latest.id;
-    window.speechSynthesis.cancel();
-    const utterance = new SpeechSynthesisUtterance(cleanForSpeech(latest.content));
-    utterance.lang = 'zh-TW';
-    utterance.rate = 1.04;
-    utterance.pitch = 1.02;
-    window.speechSynthesis.speak(utterance);
+    let cancelled = false;
+    currentAudioRef.current?.pause();
+    if (currentAudioUrlRef.current) URL.revokeObjectURL(currentAudioUrlRef.current);
+    currentAudioRef.current = null;
+    currentAudioUrlRef.current = null;
+    void synthesizeSpeech(cleanForSpeech(latest.content))
+      .then((audioBlob) => {
+        if (cancelled) return;
+        const audioUrl = URL.createObjectURL(audioBlob);
+        const audio = new Audio(audioUrl);
+        currentAudioUrlRef.current = audioUrl;
+        currentAudioRef.current = audio;
+        return audio.play();
+      })
+      .catch(() => {
+        if (!cancelled) setSpeechStatus('AI 語音暫時產生失敗，已保留文字回覆。');
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [messages, voiceReplyEnabled]);
 
   async function submit(contentOverride?: string) {

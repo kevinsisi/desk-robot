@@ -1,14 +1,34 @@
-import { expect, it } from 'vitest';
+import { afterEach, expect, it, vi } from 'vitest';
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
+
+vi.mock('@andresaya/edge-tts', () => {
+  class MockEdgeTTS {
+    synthesize = vi.fn(async () => undefined);
+    toBuffer = vi.fn(() => Buffer.from([5, 6, 7]));
+  }
+  return {
+    EdgeTTS: vi.fn(function EdgeTTSMock() { return new MockEdgeTTS(); }),
+    Constants: { OUTPUT_FORMAT: { AUDIO_24KHZ_48KBITRATE_MONO_MP3: 'audio-24khz-48kbitrate-mono-mp3' } },
+  };
+});
+
+import { EdgeTTS } from '@andresaya/edge-tts';
 import { buildApp } from './app.js';
+
+afterEach(() => {
+  vi.restoreAllMocks();
+  delete process.env.OPENAI_API_KEY;
+  delete process.env.DESK_BOT_TTS_MODEL;
+  delete process.env.DESK_BOT_TTS_VOICE;
+});
 
 it('returns health with version', async () => {
   const app = buildApp();
   const response = await app.inject({ method: 'GET', url: '/health' });
   expect(response.statusCode).toBe(200);
-  expect(response.json()).toEqual({ ok: true, version: '0.1.0' });
+  expect(response.json()).toEqual({ ok: true, version: '0.2.0' });
 });
 
 it('returns evidence-backed state projection', async () => {
@@ -58,6 +78,50 @@ it('rejects blank messages', async () => {
   const app = buildApp();
   const response = await app.inject({ method: 'POST', url: '/api/messages', payload: { content: '   ' } });
   expect(response.statusCode).toBe(400);
+});
+
+it('synthesizes assistant speech through real AI TTS instead of browser speech synthesis', async () => {
+  process.env.OPENAI_API_KEY = 'test-openai-key';
+  const audioBytes = new Uint8Array([1, 2, 3, 4]);
+  const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(audioBytes, {
+    status: 200,
+    headers: { 'content-type': 'audio/mpeg' },
+  }));
+
+  const app = buildApp();
+  const response = await app.inject({ method: 'POST', url: '/api/tts', payload: { text: '我準備好了' } });
+
+  expect(response.statusCode).toBe(200);
+  expect(response.headers['content-type']).toContain('audio/mpeg');
+  expect(response.headers['x-tts-provider']).toBe('openai');
+  expect(response.rawPayload).toEqual(Buffer.from(audioBytes));
+  expect(fetchSpy).toHaveBeenCalledWith('https://api.openai.com/v1/audio/speech', expect.objectContaining({
+    method: 'POST',
+    headers: expect.objectContaining({ Authorization: 'Bearer test-openai-key' }),
+  }));
+  const body = JSON.parse(String(fetchSpy.mock.calls[0][1]?.body));
+  expect(body).toMatchObject({ model: 'gpt-4o-mini-tts', voice: 'coral', input: '我準備好了' });
+  expect(body.instructions).toContain('台灣華語');
+});
+
+it('uses Taiwanese Edge neural TTS when OpenAI credentials are not configured', async () => {
+  const app = buildApp();
+  const response = await app.inject({ method: 'POST', url: '/api/tts', payload: { text: '測試台灣腔' } });
+  expect(response.statusCode, response.payload).toBe(200);
+  expect(response.headers['content-type']).toContain('audio/mpeg');
+  expect(response.headers['x-tts-provider']).toBe('edge-tts');
+  expect(response.rawPayload).toEqual(Buffer.from([5, 6, 7]));
+  const edgeInstance = vi.mocked(EdgeTTS).mock.results[0].value as { synthesize: ReturnType<typeof vi.fn> };
+  expect(edgeInstance.synthesize).toHaveBeenCalledWith('測試台灣腔', 'zh-TW-HsiaoChenNeural', expect.objectContaining({
+    outputFormat: 'audio-24khz-48kbitrate-mono-mp3',
+  }));
+});
+
+it('rejects blank TTS text', async () => {
+  const app = buildApp();
+  const response = await app.inject({ method: 'POST', url: '/api/tts', payload: { text: '   ' } });
+  expect(response.statusCode).toBe(400);
+  expect(response.json().error).toBe('empty_text');
 });
 
 it('serves the phone terminal shell without browser caching old app bundles', async () => {
