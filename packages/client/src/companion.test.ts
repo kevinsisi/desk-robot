@@ -43,6 +43,7 @@ describe('robot expression model', () => {
   it('derives visible expressions from current Desk Bot context', () => {
     expect(getRobotExpression({ state: 'thinking', label: '收到指令', lastLine: '我看到你正面看著鏡頭。' })).toBe('seeing');
     expect(getRobotExpression({ state: 'idle', label: '正在聽語音' })).toBe('listening');
+    expect(getRobotExpression({ state: 'idle', label: '收到指令', lastLine: '已恢復正常模式。' })).toBe('curious');
     expect(getRobotExpression({ state: 'thinking', lastLine: '可以做這個可愛表情：嘴巴微微嘟起，像啾一下。' })).toBe('playful');
     expect(getRobotExpression({ state: 'idle', lastLine: '相機權限被拒絕，暫時無法看畫面。' })).toBe('worried');
   });

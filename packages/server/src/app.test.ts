@@ -60,7 +60,7 @@ it('accepts a user message and appends a runtime event', async () => {
   expect(body.messages[0]).toMatchObject({ role: 'assistant', content: '測試模式已收到指令：繼續做 runtime' });
   expect(body.messages[1]).toMatchObject({ role: 'user', content: '繼續做 runtime' });
   expect(body.events[0].type).toBe('agent.replied');
-  expect(body.robot.label).toBe('收到指令');
+  expect(body.robot).toMatchObject({ state: 'idle', label: '待命中' });
 });
 
 it('sends runtime messages to the local Hermes API server outside test mode', async () => {

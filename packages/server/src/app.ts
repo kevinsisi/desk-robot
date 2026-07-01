@@ -191,6 +191,27 @@ async function askAgent(text: string, imageDataUrl?: string) {
   return extractHermesAssistantText(response);
 }
 
+function projectRobotState() {
+  const latestMessage = messages[0];
+  const latestEvent = runtimeEvents[0];
+  if (latestEvent?.type === 'agent.failed') {
+    return { state: 'blocked' as const, label: '回覆失敗' };
+  }
+  if (latestMessage?.role === 'user') {
+    return { state: 'thinking' as const, label: '思考中' };
+  }
+  if (latestEvent?.type.startsWith('vision.')) {
+    return { state: 'idle' as const, label: latestEvent.type === 'vision.replied' ? '看完畫面' : '看畫面中' };
+  }
+  if (latestEvent?.type === 'camera.started') {
+    return { state: 'acting' as const, label: '看著畫面' };
+  }
+  if (latestEvent?.type === 'audio.recorded' || latestEvent?.type === 'companion.started') {
+    return { state: 'acting' as const, label: '正在聽' };
+  }
+  return { state: 'idle' as const, label: '待命中' };
+}
+
 export function buildApp() {
   const app = Fastify({ logger: false, bodyLimit: 10 * 1024 * 1024 });
 
@@ -198,14 +219,16 @@ export function buildApp() {
 
   app.get('/health', async () => ({ ok: true, version: SERVER_VERSION }));
 
-  app.get('/api/state', async () => ({
-    robot: {
-      name: 'Desk Bot',
-      state: messages.length > 1 ? 'thinking' : 'idle',
-      label: messages.length > 1 ? '收到指令' : '待命中',
-      domain: 'https://robot.sisihome.org',
-      secureContextRequired: true,
-    },
+  app.get('/api/state', async () => {
+    const robotProjection = projectRobotState();
+    return {
+      robot: {
+        name: 'Desk Bot',
+        state: robotProjection.state,
+        label: robotProjection.label,
+        domain: 'https://robot.sisihome.org',
+        secureContextRequired: true,
+      },
     activeTask: {
       id: 'runtime-agent',
       objective: '手機終端：用手機當 Desk Bot 的眼睛、耳朵與回覆介面',
@@ -225,7 +248,8 @@ export function buildApp() {
     ],
     events: runtimeEvents.slice(0, 12),
     messages: messages.slice(0, 20),
-  }));
+    };
+  });
 
   app.post<{ Body: { text?: string } }>('/api/tts', async (request, reply) => {
     const text = cleanTtsInput(String(request.body?.text ?? ''));
