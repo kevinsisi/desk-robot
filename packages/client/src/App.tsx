@@ -108,7 +108,7 @@ export function App() {
     speechStarterRef.current = starter;
   }, []);
 
-  const latestAssistantLine = state.messages.find((message) => message.role === 'assistant')?.content;
+  const latestAssistantLine = [...state.messages].reverse().find((message) => message.role === 'assistant')?.content;
 
   return (
     <main className="app-shell companion-shell phone-terminal-shell">

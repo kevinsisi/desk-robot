@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { classifyCompanionCommand, getProductCapabilities, getPrimaryActions, getRobotExpression } from './companion';
+import { classifyCompanionCommand, getProductCapabilities, getPrimaryActions, getRobotExpression, getRobotExpressionHeadline } from './companion';
 
 describe('companion command routing', () => {
   it('routes visual questions to camera analysis', () => {
@@ -38,5 +38,18 @@ describe('robot expression model', () => {
     expect(getRobotExpression('thinking')).toBe('thinking');
     expect(getRobotExpression('acting')).toBe('happy');
     expect(getRobotExpression('blocked')).toBe('worried');
+  });
+
+  it('derives visible expressions from current Desk Bot context', () => {
+    expect(getRobotExpression({ state: 'thinking', label: '收到指令', lastLine: '我看到你正面看著鏡頭。' })).toBe('seeing');
+    expect(getRobotExpression({ state: 'idle', label: '正在聽語音' })).toBe('listening');
+    expect(getRobotExpression({ state: 'thinking', lastLine: '可以做這個可愛表情：嘴巴微微嘟起，像啾一下。' })).toBe('playful');
+    expect(getRobotExpression({ state: 'idle', lastLine: '相機權限被拒絕，暫時無法看畫面。' })).toBe('worried');
+  });
+
+  it('uses matching headlines for non-default expressions', () => {
+    expect(getRobotExpressionHeadline('seeing')).toBe('我有看到喔');
+    expect(getRobotExpressionHeadline('listening')).toBe('我在聽你說');
+    expect(getRobotExpressionHeadline('playful')).toBe('啾一下～');
   });
 });
