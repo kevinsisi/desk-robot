@@ -218,10 +218,24 @@ export function buildApp() {
 
   const staticRoot = process.env.STATIC_ROOT;
   if (staticRoot && existsSync(staticRoot)) {
-    app.register(fastifyStatic, { root: staticRoot, prefix: '/', wildcard: false });
+    app.addHook('onSend', async (request, reply, payload) => {
+      const contentType = reply.getHeader('content-type');
+      if (!request.url.startsWith('/api/') && typeof contentType === 'string' && contentType.includes('text/html')) {
+        reply.header('Cache-Control', 'no-store, max-age=0');
+      }
+      return payload;
+    });
+    app.register(fastifyStatic, {
+      root: staticRoot,
+      prefix: '/',
+      wildcard: false,
+      setHeaders: (response, pathName) => {
+        if (pathName.endsWith('index.html')) response.setHeader('Cache-Control', 'no-store, max-age=0');
+      },
+    });
     app.setNotFoundHandler(async (request, reply) => {
       if (request.url.startsWith('/api/') || request.url === '/health') return reply.status(404).send({ error: 'not_found' });
-      return reply.sendFile('index.html');
+      return reply.header('Cache-Control', 'no-store, max-age=0').sendFile('index.html');
     });
   }
 

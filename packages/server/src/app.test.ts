@@ -1,4 +1,7 @@
 import { expect, it } from 'vitest';
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { tmpdir } from 'node:os';
 import { buildApp } from './app.js';
 
 it('returns health with version', async () => {
@@ -55,4 +58,21 @@ it('rejects blank messages', async () => {
   const app = buildApp();
   const response = await app.inject({ method: 'POST', url: '/api/messages', payload: { content: '   ' } });
   expect(response.statusCode).toBe(400);
+});
+
+it('serves the phone terminal shell without browser caching old app bundles', async () => {
+  const previousStaticRoot = process.env.STATIC_ROOT;
+  const staticRoot = mkdtempSync(join(tmpdir(), 'desk-robot-static-'));
+  writeFileSync(join(staticRoot, 'index.html'), '<html><body>phone shell</body></html>');
+  process.env.STATIC_ROOT = staticRoot;
+  try {
+    const app = buildApp();
+    const response = await app.inject({ method: 'GET', url: '/' });
+    expect(response.statusCode).toBe(200);
+    expect(response.headers['cache-control']).toContain('no-store');
+  } finally {
+    if (previousStaticRoot === undefined) delete process.env.STATIC_ROOT;
+    else process.env.STATIC_ROOT = previousStaticRoot;
+    rmSync(staticRoot, { recursive: true, force: true });
+  }
 });
