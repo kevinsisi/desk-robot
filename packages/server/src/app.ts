@@ -18,7 +18,10 @@ interface ChatMessage {
   role: 'user' | 'assistant';
   content: string;
   createdAt: string;
+  emotion?: RobotEmotion;
 }
+
+type RobotEmotion = 'curious' | 'thinking' | 'happy' | 'worried' | 'sad' | 'seeing' | 'listening' | 'playful';
 
 interface HermesChatMessage {
   role: string;
@@ -42,8 +45,23 @@ const runtimeEvents: RuntimeEvent[] = [
   { id: 'evt-3', type: 'media.permission', safeSummary: '相機與麥克風只會在你手動確認後啟用。', createdAt: bootTime },
 ];
 const messages: ChatMessage[] = [
-  { id: 'msg-1', role: 'assistant', content: '嗨，我準備好了。', createdAt: bootTime },
+  { id: 'msg-1', role: 'assistant', content: '嗨，我準備好了。', emotion: 'curious', createdAt: bootTime },
 ];
+
+const blockedPattern = /(卡住|失敗|錯誤|抱歉|不能|無法|權限|拒絕|denied|error|failed)/i;
+const sadPattern = /(難過|傷心|嗚嗚|哭|淚|眼淚|寂寞|沮喪|委屈|失落|低落|不開心|心情不好|小機器人燈都變藍|變藍了|QQ|;´ω`)/;
+const playfulPattern = /(可愛|啾|嘟|撒嬌|笑一下|眨眼|歪一邊|表情)/;
+const seeingPattern = /(看到|看見|鏡頭|畫面|眼睛|正面|桌上|前面|辨識|觀察|看著|影像|截圖)/;
+const listeningPattern = /(正在聽|聽你說|說話|語音|麥克風|耳朵|陪我)/;
+
+function inferAssistantEmotion(content: string, fallback: RobotEmotion = 'happy'): RobotEmotion {
+  if (blockedPattern.test(content)) return 'worried';
+  if (sadPattern.test(content)) return 'sad';
+  if (playfulPattern.test(content)) return 'playful';
+  if (seeingPattern.test(content)) return 'seeing';
+  if (listeningPattern.test(content)) return 'listening';
+  return fallback;
+}
 
 function appendEvent(type: string, safeSummary: string) {
   const event = {
@@ -56,13 +74,14 @@ function appendEvent(type: string, safeSummary: string) {
   return event;
 }
 
-function appendMessage(role: ChatMessage['role'], content: string) {
+function appendMessage(role: ChatMessage['role'], content: string, emotion?: RobotEmotion) {
   const message: ChatMessage = {
     id: `msg-${Date.now()}-${Math.random().toString(16).slice(2)}`,
     role,
     content: content.trim().slice(0, 4000),
     createdAt: new Date().toISOString(),
   };
+  if (role === 'assistant') message.emotion = emotion ?? inferAssistantEmotion(message.content);
   messages.unshift(message);
   return message;
 }
@@ -278,7 +297,7 @@ export function buildApp() {
         return reply.status(201).send({ message: userMessage, assistant, stateUpdated: true });
       } catch (error) {
         const detail = error instanceof Error ? error.message : 'unknown';
-        const assistant = appendMessage('assistant', `我收到「${userMessage.content}」，但模型回覆暫時失敗：${detail.slice(0, 160)}`);
+        const assistant = appendMessage('assistant', `我收到「${userMessage.content}」，但模型回覆暫時失敗：${detail.slice(0, 160)}`, 'worried');
         appendEvent('agent.failed', `模型回覆失敗：${detail.slice(0, 120)}`);
         return reply.status(201).send({ message: userMessage, assistant, stateUpdated: true, warning: detail });
       }
@@ -297,12 +316,12 @@ export function buildApp() {
     appendEvent('vision.received', '收到前鏡頭截圖，開始辨識畫面。');
     try {
       const answer = await askAgent(prompt, imageDataUrl);
-      const assistant = appendMessage('assistant', answer);
+      const assistant = appendMessage('assistant', answer, inferAssistantEmotion(answer, 'seeing'));
       appendEvent('vision.replied', `影像辨識已回覆：${answer.slice(0, 80)}`);
       return reply.status(201).send({ assistant });
     } catch (error) {
       const detail = error instanceof Error ? error.message : 'unknown';
-      const assistant = appendMessage('assistant', `我收到前鏡頭畫面，但影像辨識暫時失敗：${detail.slice(0, 160)}`);
+      const assistant = appendMessage('assistant', `我收到前鏡頭畫面，但影像辨識暫時失敗：${detail.slice(0, 160)}`, 'worried');
       appendEvent('vision.failed', `影像辨識失敗：${detail.slice(0, 120)}`);
       return reply.status(201).send({ assistant, warning: detail });
     }

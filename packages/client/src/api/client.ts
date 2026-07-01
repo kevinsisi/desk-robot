@@ -1,3 +1,5 @@
+import type { RobotExpression } from '../companion';
+
 export interface RuntimeEvent {
   id: string;
   type: string;
@@ -9,6 +11,7 @@ export interface ChatMessage {
   id: string;
   role: 'user' | 'assistant';
   content: string;
+  emotion?: RobotExpression;
   createdAt: string;
 }
 

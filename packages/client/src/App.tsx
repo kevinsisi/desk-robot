@@ -124,7 +124,8 @@ export function App() {
     speechStarterRef.current = starter;
   }, []);
 
-  const latestAssistantLine = state.messages.find((message) => message.role === 'assistant')?.content;
+  const latestAssistantMessage = state.messages.find((message) => message.role === 'assistant');
+  const latestAssistantLine = latestAssistantMessage?.content;
 
   return (
     <main className="app-shell companion-shell phone-terminal-shell">
@@ -133,7 +134,7 @@ export function App() {
         <span className={`load-pill load-${loadStatus}`}>{loadStatus === 'live' ? '在線' : loadStatus === 'fallback' ? '預覽' : '讀取中'}</span>
       </header>
 
-      <RobotFace state={state.robot} lastLine={latestAssistantLine} onStartCompanion={handleStartCompanion} />
+      <RobotFace state={state.robot} lastLine={latestAssistantLine} emotion={latestAssistantMessage?.emotion} onStartCompanion={handleStartCompanion} />
 
       <ChatPanel messages={state.messages} onSend={handleSendMessage} onVisionCommand={handleVisionCommand} onRegisterSpeechStarter={registerSpeechStarter} />
 

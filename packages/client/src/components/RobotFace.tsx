@@ -1,14 +1,15 @@
 import type { DeskRobotState } from '../api/client';
-import { getRobotExpression, getRobotExpressionHeadline } from '../companion';
+import { getRobotExpression, getRobotExpressionHeadline, type RobotExpression } from '../companion';
 
 interface RobotFaceProps {
   state: DeskRobotState['robot'];
   lastLine?: string;
+  emotion?: RobotExpression;
   onStartCompanion?: () => Promise<void>;
 }
 
-export function RobotFace({ state, lastLine, onStartCompanion }: RobotFaceProps) {
-  const expression = getRobotExpression({ state: state.state, label: state.label, lastLine });
+export function RobotFace({ state, lastLine, emotion, onStartCompanion }: RobotFaceProps) {
+  const expression = emotion ?? getRobotExpression({ state: state.state, label: state.label, lastLine });
   return (
     <section className={`robot-stage expression-${expression}`} aria-label="Desk Bot">
       <div className="ambient-orb orb-a" />

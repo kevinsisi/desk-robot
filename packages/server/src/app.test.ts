@@ -31,7 +31,7 @@ it('returns health with version', async () => {
   const app = buildApp();
   const response = await app.inject({ method: 'GET', url: '/health' });
   expect(response.statusCode).toBe(200);
-  expect(response.json()).toEqual({ ok: true, version: '0.2.1' });
+  expect(response.json()).toEqual({ ok: true, version: '0.2.2' });
 });
 
 it('returns evidence-backed state projection', async () => {
@@ -57,10 +57,24 @@ it('accepts a user message and appends a runtime event', async () => {
 
   const state = await app.inject({ method: 'GET', url: '/api/state' });
   const body = state.json();
-  expect(body.messages[0]).toMatchObject({ role: 'assistant', content: '測試模式已收到指令：繼續做 runtime' });
+  expect(body.messages[0]).toMatchObject({ role: 'assistant', content: '測試模式已收到指令：繼續做 runtime', emotion: 'happy' });
   expect(body.messages[1]).toMatchObject({ role: 'user', content: '繼續做 runtime' });
   expect(body.events[0].type).toBe('agent.replied');
   expect(body.robot).toMatchObject({ state: 'idle', label: '待命中' });
+});
+
+it('attaches a concrete emotion module to every assistant response', async () => {
+  const app = buildApp();
+  const create = await app.inject({ method: 'POST', url: '/api/messages', payload: { content: '講一句難過的話' } });
+  expect(create.statusCode).toBe(201);
+  expect(create.json().assistant).toMatchObject({ role: 'assistant', emotion: 'sad' });
+
+  const state = await app.inject({ method: 'GET', url: '/api/state' });
+  const assistantMessages = state.json().messages.filter((message: { role: string }) => message.role === 'assistant');
+  expect(assistantMessages.length).toBeGreaterThan(0);
+  for (const message of assistantMessages) {
+    expect(message.emotion).toMatch(/^(curious|thinking|happy|worried|sad|seeing|listening|playful)$/);
+  }
 });
 
 it('sends runtime messages to the local Hermes API server outside test mode', async () => {

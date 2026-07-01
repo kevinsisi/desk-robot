@@ -11,7 +11,7 @@ afterEach(() => {
 });
 
 it('exposes app version', () => {
-  expect(APP_VERSION).toBe('0.2.1');
+  expect(APP_VERSION).toBe('0.2.2');
 });
 
 it('presents the product as a phone terminal instead of a desktop console', async () => {
@@ -53,4 +53,29 @@ it('drives the face from the newest assistant reply, not the old boot greeting',
 
   await vi.waitFor(() => expect(document.body.textContent).toContain('啾一下～'));
   expect(document.body.textContent).toContain('可以做可愛表情');
+});
+
+it('uses the assistant response emotion module when it is provided', async () => {
+  vi.stubGlobal('fetch', vi.fn(() => Promise.resolve(new Response(JSON.stringify({
+    robot: {
+      name: 'Desk Bot',
+      state: 'idle',
+      label: '待命中',
+      domain: 'https://robot.sisihome.org',
+      secureContextRequired: true,
+    },
+    activeTask: null,
+    approvals: [],
+    events: [],
+    messages: [
+      { id: 'emotion-assistant', role: 'assistant', content: '我收到你的回應了。', emotion: 'sad', createdAt: new Date().toISOString() },
+    ],
+  }), { status: 200, headers: { 'Content-Type': 'application/json' } }))));
+
+  const host = document.createElement('div');
+  document.body.appendChild(host);
+  createRoot(host).render(createElement(App));
+
+  await vi.waitFor(() => expect(document.body.textContent).toContain('我有點難過'));
+  expect(document.querySelector('.expression-sad')).not.toBeNull();
 });
