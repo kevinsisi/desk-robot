@@ -11,6 +11,9 @@ services:
       HOST: 0.0.0.0
       PORT: 8723
       STATIC_ROOT: /app/packages/client/dist
+      HERMES_API_BASE_URL: ${HERMES_API_BASE_URL:-http://host.docker.internal:8642}
+      HERMES_API_KEY: ${HERMES_API_KEY:-}
+      HERMES_SESSION_ID: ${HERMES_SESSION_ID:-desk-robot-runtime}
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       DESK_BOT_TTS_MODEL: ${DESK_BOT_TTS_MODEL:-gpt-4o-mini-tts}
       DESK_BOT_TTS_VOICE: ${DESK_BOT_TTS_VOICE:-coral}

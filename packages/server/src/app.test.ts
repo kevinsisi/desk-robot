@@ -22,6 +22,9 @@ afterEach(() => {
   delete process.env.OPENAI_API_KEY;
   delete process.env.DESK_BOT_TTS_MODEL;
   delete process.env.DESK_BOT_TTS_VOICE;
+  delete process.env.HERMES_API_BASE_URL;
+  delete process.env.HERMES_API_KEY;
+  delete process.env.HERMES_SESSION_ID;
 });
 
 it('returns health with version', async () => {
@@ -58,6 +61,39 @@ it('accepts a user message and appends a runtime event', async () => {
   expect(body.messages[1]).toMatchObject({ role: 'user', content: '繼續做 runtime' });
   expect(body.events[0].type).toBe('agent.replied');
   expect(body.robot.label).toBe('收到指令');
+});
+
+it('sends runtime messages to the local Hermes API server outside test mode', async () => {
+  const oldNodeEnv = process.env.NODE_ENV;
+  process.env.NODE_ENV = 'production';
+  process.env.HERMES_API_BASE_URL = 'http://hermes.local:8642';
+  process.env.HERMES_API_KEY = 'test-hermes-key';
+  process.env.HERMES_SESSION_ID = 'desk-test-session';
+
+  const fetchSpy = vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
+    const url = String(input);
+    if (url.endsWith('/api/sessions/desk-test-session')) {
+      const auth = (init?.headers as Record<string, string>).Authorization;
+      expect(auth).toContain('test-hermes-key');
+      return new Response(JSON.stringify({ object: 'hermes.session' }), { status: 200 });
+    }
+    if (url.endsWith('/api/sessions/desk-test-session/chat')) {
+      const body = JSON.parse(String(init?.body));
+      expect(body.message).toBe('直接串 Hermes');
+      return new Response(JSON.stringify({ message: { role: 'assistant', content: '已串到 Hermes。' } }), { status: 200 });
+    }
+    return new Response('not found', { status: 404 });
+  });
+
+  try {
+    const app = buildApp();
+    const response = await app.inject({ method: 'POST', url: '/api/messages', payload: { content: '直接串 Hermes' } });
+    expect(response.statusCode).toBe(201);
+    expect(response.json().assistant.content).toBe('已串到 Hermes。');
+    expect(fetchSpy).toHaveBeenCalledTimes(2);
+  } finally {
+    process.env.NODE_ENV = oldNodeEnv;
+  }
 });
 
 it('accepts a media event and exposes it in state', async () => {

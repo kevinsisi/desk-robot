@@ -20,17 +20,21 @@ interface ChatMessage {
   createdAt: string;
 }
 
-interface OpenCodeResponsePart {
-  type: string;
-  text?: string;
+interface HermesChatMessage {
+  role: string;
+  content?: string;
 }
 
 const bootTime = new Date().toISOString();
-const openCodeBaseUrl = process.env.OPENCODE_BASE_URL ?? 'http://100.73.52.37:4096';
-const openCodeProviderID = process.env.OPENCODE_PROVIDER_ID ?? 'openai';
-const openCodeModelID = process.env.OPENCODE_MODEL ?? 'gpt-5.5';
-const openCodeVariant = process.env.OPENCODE_VARIANT ?? 'medium';
-let openCodeSessionID: string | null = null;
+function hermesBaseUrl() {
+  return (process.env.HERMES_API_BASE_URL ?? 'http://127.0.0.1:8642').replace(/\/$/, '');
+}
+function hermesApiKey() {
+  return process.env.HERMES_API_KEY ?? process.env.API_SERVER_KEY ?? '';
+}
+function hermesSessionID() {
+  return process.env.HERMES_SESSION_ID ?? 'desk-robot-runtime';
+}
 
 const runtimeEvents: RuntimeEvent[] = [
   { id: 'evt-1', type: 'system.boot', safeSummary: '系統規劃已建立，等待第一個實作任務。', createdAt: bootTime },
@@ -86,25 +90,41 @@ async function fetchJsonWithTimeout(url: string, init: RequestInit, timeoutMs = 
   }
 }
 
-async function getOpenCodeSession() {
-  if (openCodeSessionID) return openCodeSessionID;
-  const session = await fetchJsonWithTimeout(`${openCodeBaseUrl}/session`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      title: 'desk-robot-runtime',
-      agent: 'general',
-      model: { providerID: openCodeProviderID, id: openCodeModelID, variant: openCodeVariant },
-    }),
-  }, 20000);
-  openCodeSessionID = String(session.id);
-  return openCodeSessionID;
+function hermesHeaders() {
+  if (!hermesApiKey()) throw new Error('hermes_api_key_not_configured');
+  return {
+    'Content-Type': 'application/json',
+    Authorization: `Bearer ${hermesApiKey()}`,
+    'X-Hermes-Session-Key': hermesSessionID(),
+  };
 }
 
-function extractAssistantText(response: Record<string, unknown>) {
-  const parts = Array.isArray(response.parts) ? response.parts as OpenCodeResponsePart[] : [];
-  const text = parts.filter((part) => part.type === 'text' && part.text).map((part) => part.text).join('\n').trim();
-  return text || '我收到指令了，但這次沒有取得模型文字回覆。';
+async function ensureHermesSession() {
+  const response = await fetch(`${hermesBaseUrl()}/api/sessions/${encodeURIComponent(hermesSessionID())}`, {
+    method: 'GET',
+    headers: hermesHeaders(),
+  });
+  if (response.status === 404) {
+    await fetchJsonWithTimeout(`${hermesBaseUrl()}/api/sessions`, {
+      method: 'POST',
+      headers: hermesHeaders(),
+      body: JSON.stringify({
+        id: hermesSessionID(),
+        title: 'Desk Robot Runtime',
+        system_prompt: '你是 Desk Robot 的即時助理。只用繁體中文（台灣）回覆。簡潔、直接、可執行。若收到影像，先描述你看到的重點，再回答使用者指令。不要假裝有看不到的內容。',
+      }),
+    }, 20000);
+    return;
+  }
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(`${response.status} ${text.slice(0, 300)}`);
+  }
+}
+
+function extractHermesAssistantText(response: Record<string, unknown>) {
+  const message = response.message as HermesChatMessage | undefined;
+  return message?.content?.trim() || '我收到指令了，但這次沒有取得模型文字回覆。';
 }
 
 function cleanTtsInput(text: string) {
@@ -153,25 +173,22 @@ async function askAgent(text: string, imageDataUrl?: string) {
     return imageDataUrl ? `測試模式已辨識影像指令：${text}` : `測試模式已收到指令：${text}`;
   }
 
-  const sessionID = await getOpenCodeSession();
-  const parts: Array<Record<string, string>> = [{ type: 'text', text }];
-  if (imageDataUrl) {
-    const mime = imageDataUrl.match(/^data:([^;]+);/)?.[1] ?? 'image/jpeg';
-    const extension = mime.split('/')[1] ?? 'jpg';
-    parts.push({ type: 'file', mime, url: imageDataUrl, filename: `desk-robot-camera.${extension}` });
-  }
-  const response = await fetchJsonWithTimeout(`${openCodeBaseUrl}/session/${sessionID}/message`, {
+  await ensureHermesSession();
+  const message: string | Array<Record<string, string | Record<string, string>>> = imageDataUrl
+    ? [
+        { type: 'text', text },
+        { type: 'image_url', image_url: { url: imageDataUrl } },
+      ]
+    : text;
+  const response = await fetchJsonWithTimeout(`${hermesBaseUrl()}/api/sessions/${encodeURIComponent(hermesSessionID())}/chat`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: hermesHeaders(),
     body: JSON.stringify({
-      model: { providerID: openCodeProviderID, modelID: openCodeModelID },
-      agent: 'general',
-      variant: openCodeVariant,
-      system: '你是 Desk Robot 的即時助理。只用繁體中文（台灣）回覆。簡潔、直接、可執行。若收到影像，先描述你看到的重點，再回答使用者指令。不要假裝有看不到的內容。',
-      parts,
+      message,
+      instructions: '你是 Desk Robot 的即時助理。只用繁體中文（台灣）回覆。簡潔、直接、可執行。若收到影像，先描述你看到的重點，再回答使用者指令。不要假裝有看不到的內容。',
     }),
   });
-  return extractAssistantText(response);
+  return extractHermesAssistantText(response);
 }
 
 export function buildApp() {
