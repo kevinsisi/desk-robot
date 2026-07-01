@@ -129,8 +129,9 @@ export function ChatPanel({ messages, onSend, onVisionCommand, onRegisterSpeechS
       }
     };
     recognition.onerror = (event) => {
-      if (event.error === 'no-speech' && keepListeningRef.current) {
-        setSpeechStatus('還在聽，等你講話…');
+      if ((event.error === 'no-speech' || event.error === 'aborted') && keepListeningRef.current) {
+        setError(null);
+        setSpeechStatus(event.error === 'aborted' ? '語音辨識被手機瀏覽器暫停，正在重新接續。' : '還在聽，等你講話…');
         return;
       }
       setError(`語音辨識失敗：${event.error ?? 'unknown'}`);

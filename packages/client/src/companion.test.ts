@@ -6,6 +6,8 @@ describe('companion command routing', () => {
     expect(classifyCompanionCommand('你現在看到什麼？')).toBe('vision');
     expect(classifyCompanionCommand('看一下桌上有什麼')).toBe('vision');
     expect(classifyCompanionCommand('辨識畫面')).toBe('vision');
+    expect(classifyCompanionCommand('我在幹嘛')).toBe('vision');
+    expect(classifyCompanionCommand('你知道我現在在幹嘛嗎')).toBe('vision');
   });
 
   it('keeps ordinary commands on the chat path', () => {

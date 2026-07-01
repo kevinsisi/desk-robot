@@ -2,7 +2,7 @@ export type CompanionCommandKind = 'chat' | 'vision';
 export type RobotRuntimeState = 'idle' | 'thinking' | 'acting' | 'blocked';
 export type RobotExpression = 'curious' | 'thinking' | 'happy' | 'worried';
 
-const visionIntentPattern = /(看到什麼|看見什麼|你看到|看一下|幫我看|辨識畫面|鏡頭|畫面|桌上|前面有什麼|這是什麼)/;
+const visionIntentPattern = /(看到什麼|看見什麼|你看到|看一下|幫我看|辨識畫面|鏡頭|畫面|桌上|前面有什麼|這是什麼|我在幹嘛|在幹嘛|在做什麼|我現在在幹嘛|我現在在做什麼)/;
 
 export function classifyCompanionCommand(command: string): CompanionCommandKind {
   return visionIntentPattern.test(command.replace(/\s+/g, '')) ? 'vision' : 'chat';
