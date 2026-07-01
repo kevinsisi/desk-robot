@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ChatMessage } from '../api/client';
 import { synthesizeSpeech } from '../api/client';
 import { classifyCompanionCommand } from '../companion';
@@ -51,13 +51,67 @@ export function ChatPanel({ messages, onSend, onVisionCommand, onRegisterSpeechS
   const lastSpokenAssistantIDRef = useRef<string | null>(null);
   const currentAudioRef = useRef<HTMLAudioElement | null>(null);
   const currentAudioUrlRef = useRef<string | null>(null);
+  const audioOutputPrimedRef = useRef(false);
   const [draft, setDraft] = useState('');
   const [sending, setSending] = useState(false);
   const [listening, setListening] = useState(false);
   const [voiceReplyEnabled, setVoiceReplyEnabled] = useState(true);
   const [speechStatus, setSpeechStatus] = useState('夥伴模式會開啟鏡頭、即時聽寫與語音回覆；視覺問題會自動抓目前畫面。');
   const [pendingAudioUrl, setPendingAudioUrl] = useState<string | null>(null);
+  const [preparingAudioMessageID, setPreparingAudioMessageID] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  const releaseCurrentAudio = useCallback(() => {
+    currentAudioRef.current?.pause();
+    if (currentAudioUrlRef.current) URL.revokeObjectURL(currentAudioUrlRef.current);
+    currentAudioUrlRef.current = null;
+    setPendingAudioUrl(null);
+  }, []);
+
+  const ensureAudioElement = useCallback(() => {
+    const audio = currentAudioRef.current ?? new Audio();
+    audio.setAttribute('playsinline', 'true');
+    audio.preload = 'auto';
+    currentAudioRef.current = audio;
+    return audio;
+  }, []);
+
+  const primeAudioOutput = useCallback(() => {
+    audioOutputPrimedRef.current = true;
+    ensureAudioElement();
+  }, [ensureAudioElement]);
+
+  const prepareAssistantAudio = useCallback(async (message: ChatMessage, options: { autoplay: boolean; cancelled?: () => boolean }) => {
+    const speechText = cleanForSpeech(message.content);
+    if (!speechText) return;
+    releaseCurrentAudio();
+    setPreparingAudioMessageID(message.id);
+    setSpeechStatus('正在產生 AI 語音…');
+    try {
+      const audioBlob = await synthesizeSpeech(speechText);
+      if (options.cancelled?.()) return;
+      const audioUrl = URL.createObjectURL(audioBlob);
+      const audio = ensureAudioElement();
+      audio.src = audioUrl;
+      currentAudioUrlRef.current = audioUrl;
+      setPendingAudioUrl(audioUrl);
+      setSpeechStatus(options.autoplay ? 'AI 語音已產生，準備播放。' : 'AI 語音已產生，請按播放。');
+      if (!options.autoplay) return;
+      try {
+        await audio.play();
+        if (!options.cancelled?.()) setSpeechStatus('已播放 AI 語音回覆。');
+      } catch {
+        if (!options.cancelled?.()) {
+          const hint = audioOutputPrimedRef.current ? '請按「播放語音回覆」，或確認手機不是靜音模式。' : '請按「播放語音回覆」。若剛進頁面，先按「開始陪我」會幫手機解鎖聲音。';
+          setSpeechStatus(`AI 語音已產生，但手機瀏覽器擋下自動播放；${hint}`);
+        }
+      }
+    } catch {
+      if (!options.cancelled?.()) setSpeechStatus('AI 語音暫時產生失敗，已保留文字回覆。');
+    } finally {
+      if (!options.cancelled?.()) setPreparingAudioMessageID(null);
+    }
+  }, [ensureAudioElement, releaseCurrentAudio]);
 
   useEffect(() => {
     const latest = messages[0];
@@ -70,34 +124,11 @@ export function ChatPanel({ messages, onSend, onVisionCommand, onRegisterSpeechS
     if (!voiceReplyEnabled || lastSpokenAssistantIDRef.current === latest.id) return;
     lastSpokenAssistantIDRef.current = latest.id;
     let cancelled = false;
-    currentAudioRef.current?.pause();
-    if (currentAudioUrlRef.current) URL.revokeObjectURL(currentAudioUrlRef.current);
-    currentAudioRef.current = null;
-    currentAudioUrlRef.current = null;
-    setPendingAudioUrl(null);
-    void synthesizeSpeech(cleanForSpeech(latest.content))
-      .then(async (audioBlob) => {
-        if (cancelled) return;
-        const audioUrl = URL.createObjectURL(audioBlob);
-        const audio = new Audio(audioUrl);
-        audio.setAttribute('playsinline', 'true');
-        currentAudioUrlRef.current = audioUrl;
-        currentAudioRef.current = audio;
-        setPendingAudioUrl(audioUrl);
-        try {
-          await audio.play();
-          if (!cancelled) setSpeechStatus('已播放 AI 語音回覆。');
-        } catch {
-          if (!cancelled) setSpeechStatus('AI 語音已產生，但手機瀏覽器擋下自動播放；請按「播放語音回覆」。');
-        }
-      })
-      .catch(() => {
-        if (!cancelled) setSpeechStatus('AI 語音暫時產生失敗，已保留文字回覆。');
-      });
+    void prepareAssistantAudio(latest, { autoplay: true, cancelled: () => cancelled });
     return () => {
       cancelled = true;
     };
-  }, [messages, voiceReplyEnabled]);
+  }, [messages, prepareAssistantAudio, voiceReplyEnabled]);
 
   async function submit(contentOverride?: string) {
     const content = (contentOverride ?? draft).trim();
@@ -180,6 +211,7 @@ export function ChatPanel({ messages, onSend, onVisionCommand, onRegisterSpeechS
 
   function startSpeech() {
     recognitionRef.current?.stop();
+    primeAudioOutput();
     const recognition = createRecognition();
     if (!recognition) return;
     recognitionRef.current = recognition;
@@ -202,6 +234,8 @@ export function ChatPanel({ messages, onSend, onVisionCommand, onRegisterSpeechS
     const audio = currentAudioRef.current;
     if (!audio || !pendingAudioUrl) return;
     try {
+      audioOutputPrimedRef.current = true;
+      if (audio.src !== pendingAudioUrl) audio.src = pendingAudioUrl;
       await audio.play();
       setSpeechStatus('已播放 AI 語音回覆。');
     } catch {
@@ -213,6 +247,8 @@ export function ChatPanel({ messages, onSend, onVisionCommand, onRegisterSpeechS
     onRegisterSpeechStarter?.(startSpeech);
     return () => onRegisterSpeechStarter?.(null);
   });
+
+  const latestAssistantMessage = messages.find((message) => message.role === 'assistant');
 
   return (
     <section className="panel chat-panel" aria-label="訊息輸入">
@@ -226,6 +262,16 @@ export function ChatPanel({ messages, onSend, onVisionCommand, onRegisterSpeechS
               <time>{new Date(message.createdAt).toLocaleTimeString('zh-TW', { hour12: false })}</time>
             </div>
             <p>{message.content}</p>
+            {message.role === 'assistant' ? (
+              <button
+                type="button"
+                className="secondary message-speak-button"
+                onClick={() => void prepareAssistantAudio(message, { autoplay: true })}
+                disabled={preparingAudioMessageID === message.id}
+              >
+                {preparingAudioMessageID === message.id ? '產生語音中…' : '播放這則語音'}
+              </button>
+            ) : null}
           </article>
         ))}
       </div>
@@ -245,6 +291,27 @@ export function ChatPanel({ messages, onSend, onVisionCommand, onRegisterSpeechS
         <div className="chat-actions">
           <button type="button" className={listening ? '' : 'secondary'} onClick={listening ? stopSpeech : startSpeech} disabled={sending}>
             {listening ? '停止即時語音' : '即時語音'}
+          </button>
+          <button
+            type="button"
+            className={voiceReplyEnabled ? '' : 'secondary'}
+            onClick={() => {
+              const next = !voiceReplyEnabled;
+              setVoiceReplyEnabled(next);
+              setSpeechStatus(next ? '語音回覆已開啟。' : '語音回覆已關閉。');
+            }}
+          >
+            {voiceReplyEnabled ? '語音回覆開' : '語音回覆關'}
+          </button>
+          <button
+            type="button"
+            className="secondary"
+            onClick={() => {
+              if (latestAssistantMessage) void prepareAssistantAudio(latestAssistantMessage, { autoplay: true });
+            }}
+            disabled={!latestAssistantMessage || preparingAudioMessageID === latestAssistantMessage.id}
+          >
+            {preparingAudioMessageID === latestAssistantMessage?.id ? '產生語音中…' : '播放最新回覆'}
           </button>
           <button type="submit" disabled={sending || draft.trim().length === 0}>
             {sending ? '送出中…' : '送出'}

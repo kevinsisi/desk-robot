@@ -11,7 +11,7 @@ afterEach(() => {
 });
 
 it('exposes app version', () => {
-  expect(APP_VERSION).toBe('0.2.3');
+  expect(APP_VERSION).toBe('0.2.4');
 });
 
 it('presents the product as a phone terminal instead of a desktop console', async () => {

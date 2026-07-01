@@ -42,7 +42,13 @@ button {
   box-shadow: 0 12px 28px rgba(24, 49, 44, 0.14);
 }
 button:hover { transform: translateY(-1px); }
-button.secondary, button:disabled {
+button.secondary {
+  background: rgba(24, 49, 44, 0.08);
+  color: var(--soft-ink);
+  box-shadow: none;
+  cursor: pointer;
+}
+button:disabled {
   background: rgba(24, 49, 44, 0.08);
   color: var(--soft-ink);
   box-shadow: none;
